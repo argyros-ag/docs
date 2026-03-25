@@ -1,0 +1,21 @@
+---
+title: "Security"
+description: "Security model of the Argyros aggregator on Fogo."
+llmDescription: "Argyros security model on Fogo. Covers non-custodial design (API returns unsigned transactions, user's wallet signs and submits directly), atomic execution (multi-hop reverts if any hop fails), slippage protection (on-chain enforcement via slippageBps), and open-source verification of on-chain program instructions."
+---
+
+## Non-custodial
+
+Argyros never holds or has access to your funds. The API returns unsigned transactions. Your wallet signs and submits them directly to the Fogo network.
+
+## Atomic execution
+
+All swap instructions execute atomically on-chain. If any hop in a multi-hop route fails (insufficient liquidity, slippage exceeded, etc.), the entire transaction reverts. No partial fills.
+
+## Slippage protection
+
+Every swap includes a slippage threshold (`slippageBps`, measured in basis points where 1 bps = 0.01%). The on-chain program enforces this. If the execution price deviates beyond the threshold, the transaction fails.
+
+## Open-source verification
+
+The on-chain program is verifiable. Integrators can inspect the instructions returned by the API to confirm exactly what will execute before signing.

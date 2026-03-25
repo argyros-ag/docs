@@ -1,0 +1,50 @@
+---
+title: "Architecture"
+description: "How Argyros routes and executes swaps on Fogo."
+llmDescription: "High-level architecture of Argyros on Fogo. Covers the data flow (client → API → Fogo network), components (API server, routing engine, on-chain program), supported DEXs (Vortex, Fluxbeam, Fogo.fun bonding curves), and the two integration paths: POST /api/v1/swap for ready-to-sign transactions vs POST /api/v1/instructions for custom transaction composition. Solana support coming soon."
+---
+
+## Data flow
+
+```
+Client                    Argyros API                 Fogo
+  │                           │                          │
+  GET /quote                  │                          │
+  ──────────────────────────>│                          │
+                              │  find best route         │
+  QuoteResponse               │  across all pools        │
+  <──────────────────────────│                          │
+                              │                          │
+  POST /swap                  │                          │
+  ──────────────────────────>│                          │
+                              │  build transaction       │
+  unsigned transaction        │                          │
+  <──────────────────────────│                          │
+                              │                          │
+  sign + submit ─────────────────────────────────────────>│
+                              │                          │
+  confirmation <─────────────────────────────────────────│
+```
+
+## Components
+
+**API Server.** Gin-based HTTP service that handles quote requests, builds swap transactions, and returns raw instructions. Stateless and horizontally scalable.
+
+**Routing Engine.** Off-chain pathfinding that evaluates routes across all supported DEXs on Fogo. Finds direct swaps, multi-hop paths (e.g., Token A → SOL → USDC → Token B), and split routes across multiple pools.
+
+**Supported DEXs.** Vortex (concentrated liquidity), Fluxbeam (AMM), and Fogo.fun (bonding curves).
+
+**On-chain Program.** Verifies and executes the swap instructions atomically. If any hop fails or slippage is exceeded, the entire transaction reverts.
+
+<Info>
+**Solana support coming soon** with additional DEXs including Raydium, Orca, and Meteora. See [Supported Chains](/concepts/chains).
+</Info>
+
+## Two integration paths
+
+| Path | Endpoint | Use case |
+|------|----------|----------|
+| **Transaction** | `POST /api/v1/swap` | Get a ready-to-sign transaction. Sign it and submit. Simplest integration. |
+| **Instructions** | `POST /api/v1/instructions` | Get raw instructions to compose with your own transaction logic (e.g., adding custom instructions before/after the swap). |
+
+Both paths start with `GET /api/v1/quote` to find the best route.

@@ -1,0 +1,63 @@
+---
+title: "Supported Chains"
+description: "Argyros runs on Fogo today, with Solana support coming soon."
+llmDescription: "Argyros currently supports Fogo as the primary chain. Solana support with P-Token benefits (up to 7 hops, lower compute costs, better route optimization) is coming soon. Covers Fogo capabilities, the upcoming Solana chain parameter, and what to expect when Solana launches."
+---
+
+# Supported Chains
+
+Argyros currently runs on **Fogo**. **Solana support is coming soon.** When it launches, you will be able to switch chains with a single query parameter, no code changes required.
+
+## Fogo (live)
+
+Fogo is the primary chain for Argyros today.
+
+| Capability | Value |
+|------------|-------|
+| Max hops per route | 5 |
+| Compute cost | Standard |
+| Supported DEXs | Vortex, Fluxbeam, Fogo.fun |
+| Token standard | SPL Token |
+
+```bash
+curl "https://api.argyros.xyz/api/v1/quote?inputMint=...&outputMint=...&amount=...&swapMode=ExactIn"
+```
+
+## Solana (coming soon)
+
+<Info>
+Solana support is under active development and will be available soon. The API shape will be identical. Add `chain=solana` to your requests when it goes live.
+</Info>
+
+When Solana launches, Argyros will use **P-Token**, an optimized token program that uses significantly less compute units (CU) per operation. This will enable:
+
+- **Deeper routing.** Up to 7 hops instead of 5.
+- **More paths evaluated.** Wider search across liquidity sources.
+- **Better prices.** Especially for exotic token pairs with no direct pools.
+- **Batch fee transfers.** Protocol and referral fees in a single instruction.
+- **Lower transaction costs.** Reduced CU consumption.
+
+### Planned capabilities
+
+| Capability | Fogo (live) | Solana (coming soon) |
+|------------|-------------|----------------------|
+| Max hops per route | 5 | 7 |
+| Compute cost | Standard | Lower (P-Token optimized) |
+| Route optimization | Standard | Enhanced (deeper search) |
+| Supported DEXs | Vortex, Fluxbeam, Fogo.fun | Raydium, Orca, Meteora, Vortex, Fluxbeam |
+
+### How it will work
+
+When Solana support is live, all endpoints will accept an optional `chain` query parameter:
+
+```
+GET  /api/v1/quote?chain=solana&inputMint=...
+POST /api/v1/swap?chain=solana
+POST /api/v1/instructions?chain=solana
+```
+
+If omitted, `chain` will default to `fogo`. Both chains will share the same API shape. You can switch chains by changing a single parameter.
+
+<Note>
+Want to be notified when Solana support launches? Join our [Discord](https://discord.gg/argyros) for updates.
+</Note>

@@ -1,0 +1,53 @@
+---
+title: "Routing"
+description: "How Argyros finds the best swap path across DEXs on Fogo."
+llmDescription: "How Argyros routing works at a high level on Fogo. Covers direct swaps, multi-hop routing through intermediate tokens (up to 5 hops), supported liquidity sources (Vortex, Fluxbeam, Fogo.fun bonding curves), price impact severity levels, and slippage protection mechanics. Solana support coming soon with up to 7 hops via P-Token."
+---
+
+# Routing
+
+Argyros evaluates multiple paths to find the best execution for every swap.
+
+## Direct swaps
+
+For common pairs with deep liquidity (e.g., SOL/USDC), a single pool often provides the best price. Argyros compares rates across all supported pools and picks the one with the lowest price impact.
+
+## Multi-hop routing
+
+When a direct swap isn't optimal, Argyros routes through intermediate tokens. For example, swapping Token A → Token B might execute as:
+
+```
+Token A → SOL → USDC → Token B
+```
+
+Each hop uses the best available pool. The routing engine evaluates all viable paths and selects the one that maximizes output (ExactIn) or minimizes input (ExactOut).
+
+The routing engine supports up to **5 hops** on Fogo.
+
+<Info>
+**Solana coming soon.** With P-Token optimization, Solana will support up to 7 hops, enabling deeper route search for exotic token pairs. See [Supported Chains](/concepts/chains).
+</Info>
+
+## Supported liquidity sources
+
+| Source | Type |
+|--------|------|
+| Vortex | Concentrated liquidity |
+| Fluxbeam | AMM |
+| Fogo.fun | Bonding curves |
+
+## Price impact
+
+Every quote includes price impact data:
+
+| Severity | Range | Meaning |
+|----------|-------|---------|
+| `none` | < 0.1% | Negligible |
+| `low` | 0.1% – 1% | Normal for most trades |
+| `moderate` | 1% – 3% | Consider splitting into smaller trades |
+| `high` | 3% – 5% | Significant. Review before proceeding. |
+| `extreme` | > 5% | Very large trade relative to available liquidity |
+
+## Slippage protection
+
+The `slippageBps` parameter sets the maximum acceptable price deviation. If the on-chain execution price is worse than the threshold, the transaction reverts atomically. No partial fills.

@@ -1,0 +1,138 @@
+---
+title: "Executing Swaps"
+description: "End-to-end guide: get a quote, build a transaction, sign, and submit."
+llmDescription: "Step-by-step guide to executing a token swap on Argyros on Fogo. Covers the full flow: GET /api/v1/quote (with cURL + TypeScript + Python), POST /api/v1/swap to build the transaction, then sign with @solana/web3.js VersionedTransaction, sendRawTransaction, and confirmTransaction. Includes complete runnable code examples. Solana chain support coming soon."
+---
+
+# Executing Swaps
+
+This guide walks through the full swap lifecycle using the Argyros API on **Fogo**.
+
+## Flow
+
+1. **Get a quote.** Find the best route and estimated output.
+2. **Build a transaction.** Get an unsigned transaction from the API.
+3. **Sign.** Sign the transaction with the user's wallet.
+4. **Submit.** Send the signed transaction to the network.
+5. **Confirm.** Wait for on-chain confirmation.
+
+## Step 1: Get a quote
+
+<CodeGroup>
+```bash cURL
+curl "https://api.argyros.xyz/api/v1/quote?\
+inputMint=So11111111111111111111111111111111111111112&\
+outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&\
+amount=1000000000&\
+swapMode=ExactIn&\
+slippageBps=50"
+```
+
+```typescript TypeScript
+const quoteResponse = await fetch(
+  "https://api.argyros.xyz/api/v1/quote?" +
+    new URLSearchParams({
+      inputMint: "So11111111111111111111111111111111111111112",
+      outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      amount: "1000000000",
+      swapMode: "ExactIn",
+      slippageBps: "50",
+    })
+);
+const quote = await quoteResponse.json();
+console.log(`Best route: ${quote.data.hopCount} hop(s), output: ${quote.data.amountOut}`);
+```
+
+```python Python
+import requests
+
+quote_resp = requests.get("https://api.argyros.xyz/api/v1/quote", params={
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "1000000000",
+    "swapMode": "ExactIn",
+    "slippageBps": "50",
+})
+quote = quote_resp.json()
+print(f"Best route: {quote['data']['hopCount']} hop(s), output: {quote['data']['amountOut']}")
+```
+</CodeGroup>
+
+## Step 2: Build the swap transaction
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.argyros.xyz/api/v1/swap" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userWallet": "YOUR_WALLET_ADDRESS",
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "1000000000",
+    "swapMode": "ExactIn",
+    "slippageBps": 50
+  }'
+```
+
+```typescript TypeScript
+const swapResponse = await fetch("https://api.argyros.xyz/api/v1/swap", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    userWallet: wallet.publicKey.toBase58(),
+    inputMint: "So11111111111111111111111111111111111111112",
+    outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    amount: "1000000000",
+    swapMode: "ExactIn",
+    slippageBps: 50,
+  }),
+});
+const swap = await swapResponse.json();
+```
+
+```python Python
+swap_resp = requests.post("https://api.argyros.xyz/api/v1/swap", json={
+    "userWallet": "YOUR_WALLET_ADDRESS",
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "1000000000",
+    "swapMode": "ExactIn",
+    "slippageBps": 50,
+})
+swap = swap_resp.json()
+```
+</CodeGroup>
+
+## Step 3: Sign and submit
+
+```typescript TypeScript
+import { Connection, VersionedTransaction } from "@solana/web3.js";
+
+const connection = new Connection("https://api.mainnet-beta.solana.com");
+
+const txBuffer = Buffer.from(swap.data.transaction, "base64");
+const transaction = VersionedTransaction.deserialize(txBuffer);
+
+transaction.sign([wallet]);
+
+const signature = await connection.sendRawTransaction(transaction.serialize(), {
+  skipPreflight: false,
+  maxRetries: 3,
+});
+
+const confirmation = await connection.confirmTransaction({
+  signature,
+  blockhash: transaction.message.recentBlockhash,
+  lastValidBlockHeight: swap.data.lastValidBlockHeight,
+});
+
+if (confirmation.value.err) {
+  throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+}
+
+console.log(`Swap confirmed: https://solscan.io/tx/${signature}`);
+```
+
+## Using raw instructions instead
+
+If you need to compose swap instructions with other instructions (e.g., creating token accounts, adding memos), use `POST /instructions` instead of `POST /swap`. See the [Get Instructions](/api-reference/instructions/index) endpoint.

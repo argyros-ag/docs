@@ -1,0 +1,264 @@
+# Argyros — Full API Reference for LLMs
+
+> This file contains everything an AI agent needs to integrate with the Argyros swap API.
+> For a page index, see llms.txt. For a decision-tree playbook, see skill.md.
+> OpenAPI spec: https://argyros.xyz/api-reference/openapi.json
+
+Base URL: `https://api.argyros.xyz`
+
+## Chain Support
+
+Currently: **Fogo** (5 max hops, Vortex/Fluxbeam/Fogo.fun DEXs).
+
+**Coming soon**: Solana with P-Token optimization (7 max hops, lower compute, Raydium/Orca/Meteora). When available, a `chain` query parameter will be added to all endpoints.
+
+---
+
+## Response Envelope
+
+All endpoints return:
+
+```json
+// Success
+{ "success": true, "data": { ... } }
+
+// Error
+{ "success": false, "error": "descriptive message" }
+```
+
+HTTP status codes: 200 (success), 400 (bad request), 404 (no route), 429 (rate limited), 500 (internal error).
+
+---
+
+## GET /api/v1/quote
+
+Get the best swap route and estimated output for a token pair.
+
+### Parameters (query string)
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| inputMint | string | yes | — | Input token mint address (base58) |
+| outputMint | string | yes | — | Output token mint address (base58) |
+| amount | string | yes | — | Amount in smallest token units (lamports for SOL, base units for SPL) |
+| swapMode | string | yes | — | `ExactIn` (amount=input, estimate output) or `ExactOut` (amount=output, estimate input) |
+| slippageBps | integer | no | 50 | Slippage tolerance in basis points (1 bps = 0.01%) |
+
+### Response: QuoteResponse
+
+```json
+{
+  "success": true,
+  "data": {
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amountIn": "1000000000",
+    "amountOut": "145320000",
+    "priceImpactBps": 25,
+    "priceImpactPercent": "0.25%",
+    "priceImpactSeverity": "low",
+    "priceImpactWarning": "Price impact is low",
+    "feeBps": 25,
+    "routes": [
+      {
+        "poolAddress": "HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ",
+        "poolType": "Vortex",
+        "percent": 100,
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      }
+    ],
+    "routePath": ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"],
+    "hopCount": 1,
+    "otherAmountThreshold": "144593400"
+  }
+}
+```
+
+### Response field details
+
+- `amountIn` / `amountOut`: In smallest token units. For ExactIn, amountIn=requested, amountOut=calculated. Vice versa for ExactOut.
+- `priceImpactSeverity`: `none` (<0.1%), `low` (0.1-1%), `moderate` (1-3%), `high` (3-5%), `extreme` (>5%).
+- `routes[]`: Each hop. poolAddress, poolType (Fogo: Vortex|Fluxbeam|PumpFun; Solana when live: also Raydium|Orca|Meteora), percent, inputMint, outputMint.
+- `routePath`: Token mints in order. Direct: [A, B]. Multi-hop: [A, X, Y, B].
+- `otherAmountThreshold`: ExactIn → minimum output. ExactOut → maximum input. Enforced on-chain.
+
+### Errors
+
+- 400: `invalid inputMint`, `invalid outputMint`, `invalid amount`, `invalid swapMode`, `insufficient liquidity`
+- 404: `no route found`, `no pool found`
+
+### Example (cURL)
+
+```bash
+curl "https://api.argyros.xyz/api/v1/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000&swapMode=ExactIn&slippageBps=50"
+```
+
+### Example (Python)
+
+```python
+import requests
+resp = requests.get("https://api.argyros.xyz/api/v1/quote", params={
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "1000000000",
+    "swapMode": "ExactIn",
+    "slippageBps": "50",
+})
+data = resp.json()["data"]
+```
+
+### Example (TypeScript)
+
+```typescript
+const resp = await fetch("https://api.argyros.xyz/api/v1/quote?" + new URLSearchParams({
+  inputMint: "So11111111111111111111111111111111111111112",
+  outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  amount: "1000000000",
+  swapMode: "ExactIn",
+  slippageBps: "50",
+}));
+const { data } = await resp.json();
+```
+
+---
+
+## POST /api/v1/swap
+
+Build an unsigned Solana transaction for a token swap.
+
+### Request body (JSON)
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| userWallet | string | yes | — | User's wallet address (base58, signer) |
+| inputMint | string | yes | — | Input token mint |
+| outputMint | string | yes | — | Output token mint |
+| amount | string | yes | — | Amount in smallest units |
+| swapMode | string | yes | — | `ExactIn` or `ExactOut` |
+| slippageBps | integer | no | 50 | Slippage tolerance in bps |
+| skipSimulation | boolean | no | false | Skip pre-flight simulation |
+
+### Response: SwapResponse
+
+```json
+{
+  "success": true,
+  "data": {
+    "transaction": "<base64-encoded unsigned transaction>",
+    "lastValidBlockHeight": 245832190,
+    "amountIn": "1000000000",
+    "amountOut": "145320000",
+    "minAmountOut": "144593400",
+    "feeAmount": "0",
+    "simulation": {
+      "success": true,
+      "logs": [],
+      "computeUnitsConsumed": 85000,
+      "insufficientFunds": false,
+      "slippageExceeded": false
+    },
+    "computeUnitsEstimate": 85000,
+    "route": ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"],
+    "hopCount": 1,
+    "pools": ["HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ"],
+    "isSplitRoute": false
+  }
+}
+```
+
+### Response field details
+
+- `transaction`: Base64-encoded. Deserialize with `VersionedTransaction.deserialize(Buffer.from(tx, "base64"))`. Sign and submit.
+- `lastValidBlockHeight`: Transaction expires after this block (~60s). Must rebuild if expired.
+- `minAmountOut`: ExactIn only. On-chain minimum — tx reverts if output is less.
+- `maxAmountIn`: ExactOut only. On-chain maximum — tx reverts if input exceeds.
+- `simulation`: Present when skipSimulation=false. Check `insufficientFunds` and `slippageExceeded`.
+- `feeAmount`: Aggregator fee in output token units.
+
+### Errors
+
+- 400: All quote errors + `invalid user wallet`
+- 500: `simulation failed: ...`, `failed to build transaction`
+
+### Sign and submit flow (TypeScript)
+
+```typescript
+import { Connection, VersionedTransaction } from "@solana/web3.js";
+const connection = new Connection("https://api.mainnet-beta.solana.com");
+const tx = VersionedTransaction.deserialize(Buffer.from(data.transaction, "base64"));
+tx.sign([wallet]);
+const sig = await connection.sendRawTransaction(tx.serialize());
+await connection.confirmTransaction({ signature: sig, blockhash: tx.message.recentBlockhash, lastValidBlockHeight: data.lastValidBlockHeight });
+```
+
+---
+
+## POST /api/v1/instructions
+
+Get raw instructions for custom transaction composition. Same request as /swap without skipSimulation.
+
+### Response: InstructionsResponse
+
+```json
+{
+  "success": true,
+  "data": {
+    "amountIn": "1000000000",
+    "amountOut": "145320000",
+    "otherAmountThreshold": "144593400",
+    "feeAmount": "100005",
+    "route": ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"],
+    "hopCount": 1,
+    "pools": ["HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ"],
+    "instructions": [
+      {
+        "programId": "vnt1u7PzorND5JjweFWmDawKe2hLWoTwHU6QKz6XX98",
+        "data": "<base64>",
+        "accounts": [
+          { "publicKey": "...", "isSigner": true, "isWritable": true }
+        ]
+      }
+    ],
+    "addressLookupTableAddresses": ["AddressLookupTab1e..."]
+  }
+}
+```
+
+### Key differences from /swap
+
+- Returns raw instructions instead of a complete transaction.
+- No simulation field.
+- Includes `addressLookupTableAddresses` — must include when building v0 transactions.
+- Use when composing swap with other instructions (create accounts, memos, close accounts).
+
+---
+
+## GET /health
+
+Returns `{"status": "ok"}` (not wrapped in the standard envelope).
+
+---
+
+## Common Token Mints
+
+| Token | Mint | Decimals |
+|-------|------|----------|
+| SOL | So11111111111111111111111111111111111111112 | 9 |
+| USDC | EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v | 6 |
+
+## Rate Limits
+
+Default: 60 requests/minute, 10 requests/second burst. 429 response on limit. Use exponential backoff.
+
+## Error Recovery Summary
+
+| Error | Recovery |
+|-------|----------|
+| no route found (404) | Try smaller amount or different slippage |
+| insufficient liquidity (400) | Reduce amount |
+| simulation.insufficientFunds | Check wallet balance |
+| simulation.slippageExceeded | Get fresh quote |
+| BlockhashExpired (on-chain) | Rebuild from scratch |
+| SlippageExceeded (on-chain) | Get fresh quote, increase slippageBps |
+| 429 rate limited | Exponential backoff: 1s, 2s, 4s |

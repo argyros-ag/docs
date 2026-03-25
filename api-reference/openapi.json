@@ -1,152 +1,250 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "OpenAPI Plant Store",
-    "description": "A sample API that uses a plant store as an example to demonstrate features in the OpenAPI specification",
-    "license": {
-      "name": "MIT"
-    },
-    "version": "1.0.0"
+    "title": "Argyros API",
+    "description": "Swap aggregator API on Fogo. Get quotes, build swap transactions, and retrieve raw instructions for multi-hop token swaps across Vortex, Fluxbeam, and Fogo.fun. Solana support coming soon.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Argyros",
+      "url": "https://argyros.finance"
+    }
   },
   "servers": [
     {
-      "url": "http://sandbox.mintlify.com"
-    }
-  ],
-  "security": [
-    {
-      "bearerAuth": []
+      "url": "https://api.argyros.xyz",
+      "description": "Production"
     }
   ],
   "paths": {
-    "/plants": {
+    "/health": {
       "get": {
-        "description": "Returns all plants from the system that the user has access to",
+        "operationId": "healthCheck",
+        "summary": "Health check",
+        "description": "Returns service health status.",
+        "tags": ["Health"],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quote": {
+      "get": {
+        "operationId": "getQuote",
+        "summary": "Get swap quote",
+        "description": "Calculate the best swap route and estimated output for a token pair. Supports ExactIn (specify input, estimate output) and ExactOut (specify output, estimate input) modes. Returns routing details including multi-hop paths, price impact, and fee breakdown.",
+        "tags": ["Quote"],
         "parameters": [
           {
-            "name": "limit",
+            "name": "inputMint",
             "in": "query",
-            "description": "The maximum number of results to return",
+            "required": true,
+            "description": "Input token mint address (Solana base58 public key).",
+            "schema": {
+              "type": "string",
+              "example": "So11111111111111111111111111111111111111112"
+            }
+          },
+          {
+            "name": "outputMint",
+            "in": "query",
+            "required": true,
+            "description": "Output token mint address (Solana base58 public key).",
+            "schema": {
+              "type": "string",
+              "example": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            }
+          },
+          {
+            "name": "amount",
+            "in": "query",
+            "required": true,
+            "description": "Amount in smallest token units (lamports for SOL, base units for SPL tokens). For SOL with 9 decimals: 1000000000 = 1 SOL.",
+            "schema": {
+              "type": "string",
+              "example": "1000000000"
+            }
+          },
+          {
+            "name": "swapMode",
+            "in": "query",
+            "required": true,
+            "description": "How the amount is interpreted. `ExactIn`: amount is exact input, output is estimated. `ExactOut`: amount is exact desired output, input is estimated.",
+            "schema": {
+              "type": "string",
+              "enum": ["ExactIn", "ExactOut"],
+              "example": "ExactIn"
+            }
+          },
+          {
+            "name": "slippageBps",
+            "in": "query",
+            "required": false,
+            "description": "Slippage tolerance in basis points (1 bps = 0.01%). Defaults to 50 (0.5%). Common values: 10 (0.1%), 50 (0.5%), 100 (1%), 300 (3%).",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "default": 50,
+              "example": 50
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Plant response",
+            "description": "Quote calculated successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Plant"
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/QuoteResponse" }
                   }
                 }
               }
             }
           },
           "400": {
-            "description": "Unexpected error",
+            "description": "Invalid request parameters.",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "description": "Creates a new plant in the store",
-        "requestBody": {
-          "description": "Plant to add to the store",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewPlant"
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "plant response",
+          "404": {
+            "description": "No route found for the given token pair and amount.",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Plant"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
         }
       }
     },
-    "/plants/{id}": {
-      "delete": {
-        "description": "Deletes a single plant based on the ID supplied",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "ID of plant to delete",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Plant deleted",
-            "content": {}
-          },
-          "400": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-  "webhooks": {
-    "/plant/webhook": {
+    "/api/v1/swap": {
       "post": {
-        "description": "Information about a new plant added to the store",
+        "operationId": "buildSwap",
+        "summary": "Build swap transaction",
+        "description": "Build an unsigned Solana transaction for a token swap. The returned base64-encoded transaction must be signed by the user's wallet and submitted to the network. Optionally runs a simulation to validate the transaction before returning it.",
+        "tags": ["Swap"],
         "requestBody": {
-          "description": "Plant added to the store",
+          "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewPlant"
-              }
+              "schema": { "$ref": "#/components/schemas/SwapRequest" }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Return a 200 status to indicate that the data was received successfully"
+            "description": "Swap transaction built successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/SwapResponse" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters or insufficient liquidity.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "No route found.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Transaction build failed.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instructions": {
+      "post": {
+        "operationId": "buildInstructions",
+        "summary": "Get raw swap instructions",
+        "description": "Returns raw Solana instructions for a swap without wrapping them in a transaction. Use this when you need to compose swap instructions with other instructions in a custom transaction. The caller is responsible for fetching a recent blockhash, building the transaction, signing, and submitting.",
+        "tags": ["Instructions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/InstructionsRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Instructions generated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/InstructionsResponse" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "No route found.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Instruction build failed.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
           }
         }
       }
@@ -154,63 +252,327 @@
   },
   "components": {
     "schemas": {
-      "Plant": {
-        "required": [
-          "name"
-        ],
+      "ErrorResponse": {
         "type": "object",
         "properties": {
-          "name": {
-            "description": "The name of the plant",
-            "type": "string"
-          },
-          "tag": {
-            "description": "Tag to specify the type",
-            "type": "string"
-          }
-        }
+          "success": { "type": "boolean", "example": false },
+          "error": { "type": "string", "example": "no route found" }
+        },
+        "required": ["success", "error"]
       },
-      "NewPlant": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/Plant"
-          },
-          {
-            "required": [
-              "id"
-            ],
-            "type": "object",
-            "properties": {
-              "id": {
-                "description": "Identification number of the plant",
-                "type": "integer",
-                "format": "int64"
-              }
-            }
-          }
-        ]
-      },
-      "Error": {
-        "required": [
-          "error",
-          "message"
-        ],
+      "RouteInfo": {
         "type": "object",
+        "description": "A single hop in the swap route.",
         "properties": {
-          "error": {
+          "poolAddress": {
+            "type": "string",
+            "description": "Pool address used for this hop.",
+            "example": "HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ"
+          },
+          "poolType": {
+            "type": "string",
+            "description": "Liquidity pool type (Raydium, Orca, Meteora, PumpFun, etc.).",
+            "example": "Raydium"
+          },
+          "percent": {
             "type": "integer",
-            "format": "int32"
+            "description": "Percentage of swap amount routed through this pool. 100 for single route.",
+            "example": 100
           },
-          "message": {
-            "type": "string"
+          "inputMint": {
+            "type": "string",
+            "description": "Input token mint for this hop.",
+            "example": "So11111111111111111111111111111111111111112"
+          },
+          "outputMint": {
+            "type": "string",
+            "description": "Output token mint for this hop.",
+            "example": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
           }
-        }
-      }
-    },
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer"
+        },
+        "required": ["poolAddress", "poolType", "percent", "inputMint", "outputMint"]
+      },
+      "QuoteResponse": {
+        "type": "object",
+        "description": "Swap quote with routing and price impact details.",
+        "properties": {
+          "inputMint": { "type": "string", "example": "So11111111111111111111111111111111111111112" },
+          "outputMint": { "type": "string", "example": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
+          "amountIn": {
+            "type": "string",
+            "description": "Input amount in smallest token units.",
+            "example": "1000000000"
+          },
+          "amountOut": {
+            "type": "string",
+            "description": "Output amount in smallest token units.",
+            "example": "145320000"
+          },
+          "priceImpactBps": {
+            "type": "integer",
+            "description": "Price impact in basis points.",
+            "example": 25
+          },
+          "priceImpactPercent": {
+            "type": "string",
+            "description": "Human-readable price impact percentage.",
+            "example": "0.25%"
+          },
+          "priceImpactSeverity": {
+            "type": "string",
+            "enum": ["none", "low", "moderate", "high", "extreme"],
+            "description": "Price impact severity: none (<0.1%), low (0.1-1%), moderate (1-3%), high (3-5%), extreme (>5%).",
+            "example": "low"
+          },
+          "priceImpactWarning": {
+            "type": "string",
+            "description": "Warning message about price impact. Empty if negligible.",
+            "example": "Price impact is low"
+          },
+          "feeBps": {
+            "type": "integer",
+            "description": "Total fee in basis points across all hops.",
+            "example": 25
+          },
+          "routes": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RouteInfo" },
+            "description": "Detailed information about each hop in the route."
+          },
+          "routePath": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Token path from input to output. Direct: [inputMint, outputMint]. Multi-hop: [inputMint, ...intermediates, outputMint].",
+            "example": ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"]
+          },
+          "hopCount": {
+            "type": "integer",
+            "description": "Number of swap hops. 1 = direct, 2+ = multi-hop.",
+            "example": 1
+          },
+          "otherAmountThreshold": {
+            "type": "string",
+            "description": "Slippage-adjusted threshold. ExactIn: minimum output. ExactOut: maximum input.",
+            "example": "144593400"
+          }
+        },
+        "required": ["inputMint", "outputMint", "amountIn", "amountOut", "priceImpactBps", "priceImpactPercent", "priceImpactSeverity", "feeBps", "routes", "routePath", "hopCount", "otherAmountThreshold"]
+      },
+      "SwapRequest": {
+        "type": "object",
+        "description": "Parameters for building a swap transaction.",
+        "properties": {
+          "userWallet": {
+            "type": "string",
+            "description": "User's wallet address that will sign and execute the transaction.",
+            "example": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"
+          },
+          "inputMint": {
+            "type": "string",
+            "description": "Input token mint address.",
+            "example": "So11111111111111111111111111111111111111112"
+          },
+          "outputMint": {
+            "type": "string",
+            "description": "Output token mint address.",
+            "example": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Amount in smallest token units.",
+            "example": "1000000000"
+          },
+          "swapMode": {
+            "type": "string",
+            "enum": ["ExactIn", "ExactOut"],
+            "description": "ExactIn: amount is exact input. ExactOut: amount is exact desired output.",
+            "example": "ExactIn"
+          },
+          "slippageBps": {
+            "type": "integer",
+            "description": "Slippage tolerance in basis points. Default: 50 (0.5%).",
+            "default": 50,
+            "example": 50
+          },
+          "skipSimulation": {
+            "type": "boolean",
+            "description": "Skip transaction simulation. Faster but no pre-flight validation. Default: false.",
+            "default": false,
+            "example": false
+          }
+        },
+        "required": ["userWallet", "inputMint", "outputMint", "amount", "swapMode"]
+      },
+      "SimulationResult": {
+        "type": "object",
+        "description": "Transaction simulation result.",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "logs": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Simulation log messages."
+          },
+          "computeUnitsConsumed": {
+            "type": "integer",
+            "description": "Compute units consumed during simulation.",
+            "example": 85000
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message if simulation failed."
+          },
+          "insufficientFunds": {
+            "type": "boolean",
+            "description": "True if the wallet has insufficient funds for the swap."
+          },
+          "slippageExceeded": {
+            "type": "boolean",
+            "description": "True if the price moved beyond slippage tolerance."
+          }
+        },
+        "required": ["success", "logs", "computeUnitsConsumed", "insufficientFunds", "slippageExceeded"]
+      },
+      "SwapResponse": {
+        "type": "object",
+        "description": "Unsigned swap transaction and execution details.",
+        "properties": {
+          "transaction": {
+            "type": "string",
+            "description": "Base64-encoded unsigned transaction. Sign with user's wallet before submitting."
+          },
+          "lastValidBlockHeight": {
+            "type": "integer",
+            "description": "Transaction expires after this block height (~60 seconds).",
+            "example": 245832190
+          },
+          "amountIn": { "type": "string", "example": "1000000000" },
+          "amountOut": { "type": "string", "example": "145320000" },
+          "minAmountOut": {
+            "type": "string",
+            "description": "Minimum output after slippage (ExactIn only). Transaction fails if actual output is less."
+          },
+          "maxAmountIn": {
+            "type": "string",
+            "description": "Maximum input after slippage (ExactOut only). Transaction fails if actual input exceeds this."
+          },
+          "feeAmount": {
+            "type": "string",
+            "description": "Aggregator fee in output token units.",
+            "example": "0"
+          },
+          "simulation": { "$ref": "#/components/schemas/SimulationResult" },
+          "computeUnitsEstimate": {
+            "type": "integer",
+            "description": "Estimated compute units for execution.",
+            "example": 85000
+          },
+          "route": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Token path from input to output."
+          },
+          "hopCount": { "type": "integer", "example": 1 },
+          "pools": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Pool addresses used in the route."
+          },
+          "isSplitRoute": {
+            "type": "boolean",
+            "description": "Whether liquidity is split across multiple pools.",
+            "example": false
+          },
+          "splitPercents": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "Percentage split across pools (only if isSplitRoute is true)."
+          }
+        },
+        "required": ["transaction", "lastValidBlockHeight", "amountIn", "amountOut", "feeAmount", "route", "hopCount", "pools"]
+      },
+      "RawAccountMeta": {
+        "type": "object",
+        "properties": {
+          "publicKey": { "type": "string", "description": "Base58-encoded account public key." },
+          "isSigner": { "type": "boolean" },
+          "isWritable": { "type": "boolean" }
+        },
+        "required": ["publicKey", "isSigner", "isWritable"]
+      },
+      "RawInstruction": {
+        "type": "object",
+        "description": "A single Solana instruction.",
+        "properties": {
+          "programId": { "type": "string", "description": "Base58-encoded program ID." },
+          "data": { "type": "string", "description": "Base64-encoded instruction data." },
+          "accounts": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RawAccountMeta" }
+          }
+        },
+        "required": ["programId", "data", "accounts"]
+      },
+      "InstructionsRequest": {
+        "type": "object",
+        "description": "Parameters for getting raw swap instructions. Same as SwapRequest without skipSimulation.",
+        "properties": {
+          "userWallet": {
+            "type": "string",
+            "description": "User's wallet address (signer).",
+            "example": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"
+          },
+          "inputMint": { "type": "string", "example": "So11111111111111111111111111111111111111112" },
+          "outputMint": { "type": "string", "example": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
+          "amount": { "type": "string", "example": "1000000000" },
+          "swapMode": {
+            "type": "string",
+            "enum": ["ExactIn", "ExactOut"],
+            "example": "ExactIn"
+          },
+          "slippageBps": {
+            "type": "integer",
+            "default": 50,
+            "example": 50
+          }
+        },
+        "required": ["userWallet", "inputMint", "outputMint", "amount", "swapMode"]
+      },
+      "InstructionsResponse": {
+        "type": "object",
+        "description": "Raw swap instructions for custom transaction composition.",
+        "properties": {
+          "amountIn": { "type": "string", "example": "1000000000" },
+          "amountOut": { "type": "string", "example": "145320000" },
+          "otherAmountThreshold": {
+            "type": "string",
+            "description": "Slippage-adjusted threshold. ExactIn: minimum output. ExactOut: maximum input.",
+            "example": "144593400"
+          },
+          "feeAmount": { "type": "string", "example": "100005" },
+          "route": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Token path from input to output."
+          },
+          "hopCount": { "type": "integer", "example": 1 },
+          "pools": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Pool addresses used in the route."
+          },
+          "instructions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RawInstruction" },
+            "description": "Ordered list of instructions to include in the transaction."
+          },
+          "addressLookupTableAddresses": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Address Lookup Table addresses for building a v0 transaction."
+          }
+        },
+        "required": ["amountIn", "amountOut", "otherAmountThreshold", "feeAmount", "route", "hopCount", "pools", "instructions", "addressLookupTableAddresses"]
       }
     }
   }

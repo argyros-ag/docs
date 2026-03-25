@@ -1,0 +1,81 @@
+---
+title: "Introduction"
+description: "Argyros is a swap aggregator on Fogo with multi-hop routing across Vortex, Fluxbeam, and more. Solana support coming soon."
+llmDescription: "Introduction to Argyros, a swap aggregator on Fogo (Solana coming soon). Covers what Argyros is, its value props (best-price multi-hop routing, fast execution, simple 3-endpoint API), the endpoint table (GET /api/v1/quote, POST /api/v1/swap, POST /api/v1/instructions, GET /health), and quick cURL + TypeScript + Python examples for getting a SOL→USDC quote on Fogo."
+---
+
+# Welcome to Argyros
+
+Argyros aggregates liquidity across the **Fogo** ecosystem to find the best swap execution for any token pair. **Solana support is coming soon.**
+
+## Why Argyros?
+
+- **Best-price routing.** Multi-hop pathfinding across Vortex, Fluxbeam, and Fogo.fun bonding curves to find optimal execution.
+- **Fast execution.** Get a quote and build a ready-to-sign transaction in a single API call.
+- **Simple integration.** Three endpoints cover the entire swap lifecycle: quote, build transaction, submit.
+- **Multi-chain ready.** Solana support with P-Token benefits (up to 7 hops, lower compute) is coming soon.
+
+## Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/quote` | GET | Get the best route and estimated output for a token pair |
+| `/api/v1/swap` | POST | Build an unsigned swap transaction |
+| `/api/v1/instructions` | POST | Get raw instructions for custom transaction composition |
+| `/health` | GET | Service health check |
+
+## Quick example
+
+Get a quote for swapping 1 SOL to USDC on Fogo:
+
+<CodeGroup>
+```bash cURL
+curl "https://api.argyros.xyz/api/v1/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000&swapMode=ExactIn&slippageBps=50"
+```
+
+```typescript TypeScript
+const response = await fetch(
+  "https://api.argyros.xyz/api/v1/quote?" +
+    new URLSearchParams({
+      inputMint: "So11111111111111111111111111111111111111112",
+      outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      amount: "1000000000",
+      swapMode: "ExactIn",
+      slippageBps: "50",
+    })
+);
+const { data } = await response.json();
+console.log(`Output: ${data.amountOut}, Hops: ${data.hopCount}`);
+```
+
+```python Python
+import requests
+
+resp = requests.get("https://api.argyros.xyz/api/v1/quote", params={
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "1000000000",
+    "swapMode": "ExactIn",
+    "slippageBps": "50",
+})
+data = resp.json()["data"]
+print(f"Output: {data['amountOut']}, Hops: {data['hopCount']}")
+```
+</CodeGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Supported Chains" icon="link" href="/concepts/chains">
+    Fogo capabilities and upcoming Solana support with P-Token benefits.
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/get-started/architecture">
+    High-level overview of how Argyros routes and executes swaps.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Full endpoint documentation with Try It.
+  </Card>
+  <Card title="Executing Swaps" icon="bolt" href="/guides/executing-swaps">
+    End-to-end guide for your first swap.
+  </Card>
+</CardGroup>

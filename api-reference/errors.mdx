@@ -1,0 +1,82 @@
+---
+title: "Error Codes"
+description: "Complete error code reference for the Argyros API."
+llmDescription: "Complete Argyros error reference. Covers HTTP status codes, per-endpoint error messages (quote: invalid inputMint, no route found, insufficient liquidity; swap: invalid user wallet, simulation failed; instructions: missing pool data), SimulationResult fields (insufficientFunds, slippageExceeded), and on-chain errors (SlippageExceeded, BlockhashExpired, InvalidAccountData) with recovery actions."
+---
+
+# Error Codes
+
+All error responses use the same format:
+
+```json
+{
+  "success": false,
+  "error": "error message"
+}
+```
+
+## HTTP status codes
+
+| Code | Meaning | When |
+|------|---------|------|
+| `200` | Success | Request processed successfully |
+| `400` | Bad Request | Invalid parameters, missing required fields, insufficient liquidity |
+| `404` | Not Found | No route or pool found for the given parameters |
+| `429` | Too Many Requests | Rate limit exceeded |
+| `500` | Internal Server Error | Transaction build failed, simulation error, or unexpected server issue |
+
+## API errors
+
+### Quote errors (`GET /api/v1/quote`)
+
+| Error message | HTTP | Cause |
+|---------------|------|-------|
+| `invalid inputMint` | 400 | `inputMint` is not a valid base58 public key |
+| `invalid outputMint` | 400 | `outputMint` is not a valid base58 public key |
+| `invalid amount` | 400 | Amount is not a valid positive number |
+| `invalid swapMode` | 400 | `swapMode` must be `ExactIn` or `ExactOut` |
+| `no route found` | 404 | No viable swap path exists |
+| `no pool found` | 404 | No liquidity pool exists for one of the required hops |
+| `insufficient liquidity` | 400 | Pools exist but don't have enough liquidity for the requested amount |
+
+### Swap errors (`POST /api/v1/swap`)
+
+| Error message | HTTP | Cause |
+|---------------|------|-------|
+| `invalid user wallet` | 400 | `userWallet` is not a valid base58 public key |
+| All quote errors above | 400/404 | Same causes as quote endpoint |
+| `simulation failed: ...` | 500 | Transaction simulation failed (details in message) |
+| `failed to build transaction` | 500 | Internal error building the transaction |
+
+### Instructions errors (`POST /api/v1/instructions`)
+
+| Error message | HTTP | Cause |
+|---------------|------|-------|
+| `invalid user wallet` | 400 | `userWallet` is not a valid base58 public key |
+| All quote errors above | 400/404 | Same causes as quote endpoint |
+| `failed to build instructions` | 500 | Internal error building the instructions |
+| `missing pool data` | 500 | Pool account data unavailable (temporary) |
+
+## Simulation result errors
+
+When `skipSimulation` is `false`, the swap response includes a `simulation` object:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `success` | boolean | Whether simulation passed |
+| `error` | string | Error message if simulation failed |
+| `insufficientFunds` | boolean | Wallet doesn't have enough balance |
+| `slippageExceeded` | boolean | Price moved beyond tolerance |
+| `computeUnitsConsumed` | integer | Compute units (CU) used during simulation |
+| `logs` | string[] | Program log output |
+
+## On-chain errors
+
+These errors occur after submitting a signed transaction to Solana:
+
+| Error | Cause | Recovery |
+|-------|-------|----------|
+| `SlippageExceeded` | Price changed between build and execution | Get a new quote and rebuild |
+| `InsufficientFunds` | Balance changed after simulation | Verify balance, then retry |
+| `BlockhashExpired` | Transaction wasn't confirmed in time | Rebuild with fresh blockhash |
+| `InvalidAccountData` | Pool state changed | Get a new quote (pool may have been migrated) |

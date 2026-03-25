@@ -1,0 +1,175 @@
+---
+title: "Embedding Swap in a dApp"
+description: "How to integrate Argyros swap functionality into a web application."
+llmDescription: "Complete guide to embedding Argyros swap in a React web app on Fogo. Includes TypeScript functions for getQuote and buildSwapTransaction, an executeSwap function using @solana/wallet-adapter-react signTransaction, a full React SwapButton component example, error handling table for UI messages, and best practices (show price impact, refresh quotes, handle rate limits). Solana chain support coming soon."
+---
+
+# Embedding Swap in a dApp
+
+This guide shows how to add token swap functionality to a web application using the Argyros API and a Solana wallet adapter.
+
+## Prerequisites
+
+- A web app with a Solana wallet adapter (e.g., `@solana/wallet-adapter-react`)
+- `@solana/web3.js` installed
+
+```bash
+npm install @solana/web3.js
+```
+
+## Implementation
+
+### 1. Quote function
+
+```typescript TypeScript
+const ARGYROS_API = "https://api.argyros.xyz";
+
+interface QuoteParams {
+  inputMint: string;
+  outputMint: string;
+  amount: string;
+  swapMode: "ExactIn" | "ExactOut";
+  slippageBps?: number;
+}
+
+async function getQuote(params: QuoteParams) {
+  const searchParams = new URLSearchParams({
+    inputMint: params.inputMint,
+    outputMint: params.outputMint,
+    amount: params.amount,
+    swapMode: params.swapMode,
+    slippageBps: String(params.slippageBps ?? 50),
+  });
+
+  const res = await fetch(`${ARGYROS_API}/api/v1/quote?${searchParams}`);
+  const json = await res.json();
+
+  if (!json.success) throw new Error(json.error);
+  return json.data;
+}
+```
+
+### 2. Swap function
+
+```typescript TypeScript
+import { Connection, VersionedTransaction } from "@solana/web3.js";
+
+interface SwapParams {
+  userWallet: string;
+  inputMint: string;
+  outputMint: string;
+  amount: string;
+  swapMode: "ExactIn" | "ExactOut";
+  slippageBps?: number;
+}
+
+async function buildSwapTransaction(params: SwapParams) {
+  const res = await fetch(`${ARGYROS_API}/api/v1/swap`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...params,
+      slippageBps: params.slippageBps ?? 50,
+    }),
+  });
+
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error);
+  return json.data;
+}
+
+async function executeSwap(
+  connection: Connection,
+  swapData: { transaction: string; lastValidBlockHeight: number },
+  signTransaction: (tx: VersionedTransaction) => Promise<VersionedTransaction>
+) {
+  const txBuffer = Buffer.from(swapData.transaction, "base64");
+  const transaction = VersionedTransaction.deserialize(txBuffer);
+
+  const signed = await signTransaction(transaction);
+
+  const signature = await connection.sendRawTransaction(signed.serialize(), {
+    maxRetries: 3,
+  });
+
+  await connection.confirmTransaction({
+    signature,
+    blockhash: transaction.message.recentBlockhash,
+    lastValidBlockHeight: swapData.lastValidBlockHeight,
+  });
+
+  return signature;
+}
+```
+
+### 3. Putting it together (React)
+
+```typescript TypeScript
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { useState } from "react";
+
+function SwapButton() {
+  const { connection } = useConnection();
+  const { publicKey, signTransaction } = useWallet();
+  const [status, setStatus] = useState<string>("");
+
+  async function handleSwap() {
+    if (!publicKey || !signTransaction) return;
+
+    try {
+      setStatus("Getting quote...");
+      const quote = await getQuote({
+        inputMint: "So11111111111111111111111111111111111111112",
+        outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        amount: "100000000", // 0.1 SOL
+        swapMode: "ExactIn",
+      });
+
+      setStatus(`Quote: ${quote.amountOut} USDC (${quote.hopCount} hop(s))`);
+
+      const swapData = await buildSwapTransaction({
+        userWallet: publicKey.toBase58(),
+        inputMint: "So11111111111111111111111111111111111111112",
+        outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        amount: "100000000",
+        swapMode: "ExactIn",
+      });
+
+      setStatus("Waiting for signature...");
+      const signature = await executeSwap(connection, swapData, signTransaction);
+      setStatus(`Confirmed: ${signature}`);
+    } catch (err: any) {
+      setStatus(`Error: ${err.message}`);
+    }
+  }
+
+  return (
+    <div>
+      <button onClick={handleSwap} disabled={!publicKey}>
+        Swap 0.1 SOL → USDC
+      </button>
+      {status && <p>{status}</p>}
+    </div>
+  );
+}
+```
+
+## Error handling
+
+Always handle these cases in your UI:
+
+| Error | User-facing message |
+|-------|-------------------|
+| `no route found` | "No swap route available for this pair" |
+| `insufficient liquidity` | "Not enough liquidity. Try a smaller amount." |
+| Simulation `insufficientFunds` | "Insufficient balance" |
+| Simulation `slippageExceeded` | "Price changed. Try again." |
+| Transaction expired | "Transaction expired. Retry." |
+| Wallet rejected | "Transaction cancelled" |
+
+## Best practices
+
+- **Show price impact.** Display `priceImpactSeverity` and warn users on `moderate` or higher.
+- **Show route info.** Display `hopCount` and pool types so users understand the execution path.
+- **Refresh quotes.** Quotes go stale. Re-fetch if the user hasn't submitted within 15-30 seconds.
+- **Handle rate limits.** Implement retry with backoff for `429` responses. See [Rate Limits](/api-reference/rate-limits).

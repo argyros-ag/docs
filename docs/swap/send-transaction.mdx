@@ -1,0 +1,102 @@
+---
+title: "Send Transaction"
+description: "Sign, submit, and confirm a swap transaction on Fogo."
+llmDescription: "How to sign, submit, and confirm an Argyros swap transaction on Fogo. Covers deserializing the base64 transaction from POST /api/v1/swap, signing with @solana/web3.js VersionedTransaction, sendRawTransaction, confirmTransaction with lastValidBlockHeight, transaction expiry handling, retry strategy, preflight checks, and confirmation levels (processed, confirmed, finalized). Includes TypeScript and Python examples."
+---
+
+After building a swap transaction via [`POST /api/v1/swap`](/docs/swap/build-transaction), sign it, submit it to the network, and wait for confirmation.
+
+## Full flow
+
+<CodeGroup>
+```typescript TypeScript
+import { Connection, VersionedTransaction } from "@solana/web3.js";
+
+const connection = new Connection("https://rpc.fogo.network");
+
+const txBuffer = Buffer.from(swapData.transaction, "base64");
+const transaction = VersionedTransaction.deserialize(txBuffer);
+
+transaction.sign([wallet]);
+
+const signature = await connection.sendRawTransaction(transaction.serialize(), {
+  skipPreflight: false,
+  maxRetries: 3,
+});
+
+const confirmation = await connection.confirmTransaction({
+  signature,
+  blockhash: transaction.message.recentBlockhash,
+  lastValidBlockHeight: swapData.lastValidBlockHeight,
+});
+
+if (confirmation.value.err) {
+  throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+}
+
+console.log(`Confirmed: ${signature}`);
+```
+
+```python Python
+import base64
+from solders.transaction import VersionedTransaction
+from solana.rpc.api import Client
+
+client = Client("https://rpc.fogo.network")
+
+raw_tx = base64.b64decode(swap_data["transaction"])
+transaction = VersionedTransaction.from_bytes(raw_tx)
+
+signed_tx = wallet.sign_transaction(transaction)
+
+result = client.send_raw_transaction(bytes(signed_tx))
+signature = result.value
+
+confirmation = client.confirm_transaction(
+    signature,
+    commitment="confirmed",
+)
+
+print(f"Confirmed: {signature}")
+```
+</CodeGroup>
+
+## Transaction expiry
+
+Every transaction includes a `lastValidBlockHeight`. If the transaction is not confirmed by that block height, it expires and can never be included. This is typically around 60 seconds from when the transaction was built.
+
+If a transaction expires:
+1. Get a fresh quote (prices may have changed).
+2. Build a new transaction.
+3. Sign and submit again.
+
+<Warning>
+Do not resubmit an expired transaction. It will never confirm. Always rebuild from a fresh quote.
+</Warning>
+
+## Retry strategy
+
+| Scenario | Action |
+|----------|--------|
+| `sendRawTransaction` throws network error | Retry the same signed transaction (it's idempotent) |
+| Transaction lands but fails on-chain | Get a new quote and rebuild. Pool state has changed. |
+| Transaction doesn't confirm within 30s | Check `getSignatureStatuses`. It may still land. |
+| `lastValidBlockHeight` passed | Transaction expired. Rebuild from scratch. |
+
+## Preflight checks
+
+By default, `skipPreflight: false` runs a simulation on the RPC node before broadcasting. This catches obvious failures early (wrong signer, insufficient balance, etc.).
+
+Set `skipPreflight: true` only if:
+- You already validated via the `/api/v1/swap` simulation.
+- You need the lowest possible submission latency.
+
+## Confirmation levels
+
+| Level | Meaning | Use case |
+|-------|---------|----------|
+| `processed` | Transaction seen by the RPC node | Fastest, but can be rolled back |
+| `confirmed` | Voted on by supermajority of validators | Safe for most use cases |
+| `finalized` | Rooted in the chain, irreversible | Required for high-value operations |
+
+The default `confirmTransaction` waits for `confirmed` level, which is appropriate for most swap integrations.

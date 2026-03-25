@@ -1,0 +1,20 @@
+---
+title: "Changelog"
+description: "API updates, new features, and breaking changes."
+llmDescription: "Argyros API changelog. Tracks API updates, new features, breaking changes, and deprecations in reverse chronological order."
+---
+
+API updates and changes in reverse chronological order.
+
+<Update label="v1.0.0" description="March 2026: Initial public release on Fogo">
+## Initial release
+
+- **GET /api/v1/quote**: Get best swap route with price impact and fee breakdown.
+- **POST /api/v1/swap**: Build unsigned swap transactions with optional simulation.
+- **POST /api/v1/instructions**: Get raw instructions for custom transaction composition.
+- **GET /health**: Service health check.
+
+Supported DEXs on Fogo: Vortex (concentrated liquidity), Fluxbeam (AMM), Fogo.fun (bonding curves).
+
+Features: multi-hop routing (up to 5 hops), ExactIn/ExactOut modes, slippage protection, price impact severity classification, Address Lookup Table (ALT) support.
+</Update>

@@ -1,0 +1,83 @@
+---
+title: "Swap Overview"
+description: "How token swaps work on Argyros and which integration path to choose."
+llmDescription: "Overview of the Argyros swap lifecycle on Fogo: get quote, build transaction or get instructions, sign and submit. Explains when to use POST /swap vs POST /instructions, ExactIn vs ExactOut swap modes, Fogo capabilities (5 max hops, Vortex/Fluxbeam/Fogo.fun DEXs), supported tokens, and links to detailed pages for each step. Solana support coming soon."
+---
+
+# Swap Overview
+
+Argyros provides two ways to execute token swaps on **Fogo**. Both start with the same routing engine. The difference is how much control you want over the final transaction.
+
+## Swap lifecycle
+
+Every swap follows the same three-phase pattern:
+
+<Steps>
+<Step title="Get a quote">
+  Call `GET /api/v1/quote` with the token pair, amount, and swap mode. The routing engine finds the best path across all supported DEXs and returns pricing, route details, and price impact.
+</Step>
+<Step title="Build the transaction">
+  Choose one of two paths:
+  - **`POST /api/v1/swap`**: Returns a complete unsigned transaction. Sign it and submit.
+  - **`POST /api/v1/instructions`**: Returns raw instructions. Compose them into your own transaction with custom logic.
+</Step>
+<Step title="Sign and submit">
+  Sign the transaction with the user's wallet and submit it to the network. The on-chain program executes the swap atomically.
+</Step>
+</Steps>
+
+## Which endpoint to use
+
+| Scenario | Endpoint | Why |
+|----------|----------|-----|
+| Standard swap integration | `POST /swap` | Simplest path. You get a ready-to-sign transaction. |
+| Custom transaction logic | `POST /instructions` | You need to add instructions before/after the swap (e.g., create token accounts, add memos, close accounts). |
+| Quote-only (no execution) | `GET /quote` | Display pricing or route info without building a transaction. |
+
+## Swap modes
+
+| Mode | Behavior | Use case |
+|------|----------|----------|
+| `ExactIn` | You specify the exact input amount. Output is estimated. | "I want to sell exactly 1 SOL" |
+| `ExactOut` | You specify the exact output amount. Input is estimated. | "I want to buy exactly 100 USDC" |
+
+Both modes support slippage protection. For `ExactIn`, the response includes `minAmountOut` (minimum you'll receive). For `ExactOut`, it includes `maxAmountIn` (maximum you'll spend).
+
+## Fogo capabilities
+
+| Feature | Value |
+|---------|-------|
+| Max hops | 5 |
+| Compute cost | Standard |
+| Supported DEXs | Vortex, Fluxbeam, Fogo.fun |
+
+<Info>
+**Solana support coming soon** with P-Token optimization enabling up to 7 hops, lower compute costs, and access to Raydium, Orca, and Meteora pools. See [Supported Chains](/concepts/chains).
+</Info>
+
+## Supported tokens
+
+Any SPL token with liquidity on a supported DEX can be swapped. The routing engine currently supports:
+
+- Vortex (concentrated liquidity)
+- Fluxbeam (AMM)
+- Fogo.fun (bonding curves)
+
+If a direct pool doesn't exist, the engine routes through intermediate tokens (multi-hop).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Get Quote" icon="magnifying-glass" href="/docs/swap/get-quote">
+    Understand quote parameters, response fields, and price impact.
+  </Card>
+  <Card title="Build Transaction" icon="hammer" href="/docs/swap/build-transaction">
+    Build a ready-to-sign swap transaction.
+  </Card>
+  <Card title="Get Instructions" icon="code" href="/docs/swap/get-instructions">
+    Get raw instructions for custom transaction composition.
+  </Card>
+  <Card title="Send Transaction" icon="paper-plane" href="/docs/swap/send-transaction">
+    Sign, submit, and confirm the swap on-chain.
+  </Card>
+</CardGroup>

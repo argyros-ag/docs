@@ -1,0 +1,3 @@
+[ZoneTransfer]
+git add . && git commit -m "Hello World" && git pushZoneId=3
+HostUrl=https://files.slack.com/files-pri/T02QY3FRBEK-F0A917AB553/download/gemini_generated_image_fv0h0pfv0h0pfv0h-removebg-preview_2.png?origin_team=T02QY3FRBEK

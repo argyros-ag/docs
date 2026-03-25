@@ -1,0 +1,45 @@
+---
+title: "AI Integration"
+description: "How AI agents and LLMs can use Argyros docs and APIs."
+llmDescription: "Overview of AI-friendly resources for Argyros. Covers llms.txt (LLM-optimized site index for discovering relevant pages), skill.md (decision-tree playbook for AI agents to route intents to the correct API endpoints), and how to use these resources for automated swap integration."
+---
+
+# AI Integration
+
+Argyros provides resources optimized for AI agents and LLM-powered tools.
+
+## Resources
+
+| Resource | URL | Purpose |
+|----------|-----|---------|
+| **llms.txt** | `/llms.txt` | LLM-optimized index of all docs pages. Use this to discover which page has the information you need. |
+| **llms-full.txt** | `/llms-full.txt` | Complete API reference in a single file. All parameters, response schemas, error tables, and code examples. Fetch this to get everything in one request. |
+| **skill.md** | `/skill.md` | Decision-tree playbook for AI agents. Maps user intents to API endpoints with parameter guidance, response schemas, and error recovery. |
+| **OpenAPI spec** | `/api-reference/openapi.json` | Machine-readable OpenAPI 3.1 spec for all endpoints. Use for code generation or structured API exploration. |
+
+## How to use
+
+### For LLM agents (Cursor, Claude Code, Windsurf, etc.)
+
+1. Fetch `/llms-full.txt` to get the complete API reference in one file (parameters, schemas, errors, code examples).
+2. Or fetch `/llms.txt` for a page index, then read specific pages as needed.
+3. Use `/skill.md` as a playbook for making API calls. It has decision trees, response schemas, and error recovery.
+
+### For automated integrations
+
+1. Fetch `/api-reference/openapi.json` for the machine-readable spec.
+2. Read `/skill.md` for the intent → endpoint decision tree.
+3. Use the parameter tables and error recovery flows to build robust integrations.
+
+## llms.txt
+
+The `llms.txt` file follows the [llms.txt standard](https://llmstxt.org/). It contains a one-line summary of every docs page with its URL, optimized for LLM context windows.
+
+## skill.md
+
+The `skill.md` file is a structured playbook that helps AI agents:
+
+- **Route intents.** "swap SOL for USDC" → `GET /quote` then `POST /swap`
+- **Choose parameters.** Which fields are required, what defaults to use
+- **Handle errors.** What to do when a quote returns "no route found"
+- **Compose flows.** Multi-step workflows like quote → build → sign → submit

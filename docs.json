@@ -1,68 +1,106 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Argyros",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#00BEF0",
+    "light": "#C7F284",
+    "dark": "#0090B5"
   },
   "favicon": "/favicon.svg",
+  "openapi": ["/api-reference/openapi.json"],
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Get Started",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
-            ]
-          },
-          {
-            "group": "Customization",
-            "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "get-started/introduction",
+              "get-started/architecture",
+              "get-started/faq"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Docs",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Swap",
             "pages": [
-              "api-reference/introduction"
+              "docs/swap/overview",
+              "docs/swap/get-quote",
+              "docs/swap/build-transaction",
+              "docs/swap/get-instructions",
+              "docs/swap/send-transaction"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Concepts",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "concepts/chains",
+              "concepts/routing",
+              "concepts/fees",
+              "concepts/security"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/rate-limits",
+              "api-reference/errors"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api-reference/quote/index",
+              "api-reference/swap/index",
+              "api-reference/instructions/index",
+              "api-reference/health/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/executing-swaps",
+              "guides/handling-errors",
+              "guides/embedding-swap"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "AI",
+        "groups": [
+          {
+            "group": "AI",
+            "pages": [
+              "ai/overview"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Updates",
+        "groups": [
+          {
+            "group": "Updates",
+            "pages": [
+              "updates/index"
             ]
           }
         ]
@@ -71,14 +109,9 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "Support",
+          "href": "https://discord.gg/argyros",
+          "icon": "discord"
         }
       ]
     }
@@ -90,33 +123,9 @@
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "label": "Website",
+        "href": "https://argyros.finance"
       }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

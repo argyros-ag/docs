@@ -1,0 +1,133 @@
+---
+title: "Handling Errors"
+description: "Common errors, what they mean, and how to handle them."
+llmDescription: "Error handling guide for the Argyros API on Fogo. Covers the error response format, common HTTP errors (400, 404, 429, 500) with causes and fixes, simulation error fields (insufficientFunds, slippageExceeded), on-chain transaction errors (SlippageExceeded, BlockhashExpired), and retry strategy with cURL, TypeScript, and Python examples for each error category."
+---
+
+## Error response format
+
+All errors follow the same envelope:
+
+```json
+{
+  "success": false,
+  "error": "descriptive error message"
+}
+```
+
+## Common errors
+
+| HTTP Status | Error | Cause | Fix |
+|-------------|-------|-------|-----|
+| `400` | `invalid inputMint` | Mint address is not valid base58 | Check the token mint address |
+| `400` | `invalid amount` | Amount is not a valid number or is zero | Use string representation of the amount in smallest units |
+| `400` | `invalid swapMode` | Must be `ExactIn` or `ExactOut` | Check the `swapMode` parameter |
+| `404` | `no route found` | No liquidity path exists for this pair/amount | Try a smaller amount, different slippage, or check if the token is supported |
+| `404` | `no pool found` | No pool exists for one of the hops | The token may not have any listed pools |
+| `400` | `insufficient liquidity` | Pools exist but don't have enough liquidity for this amount | Reduce the swap amount |
+| `500` | `simulation failed` | Transaction simulation failed on-chain | Check simulation logs, ensure wallet has sufficient balance |
+| `429` | (rate limit) | Too many requests | Back off and retry with exponential delay |
+
+## Handling errors in code
+
+<CodeGroup>
+```bash cURL
+response=$(curl -s -w "\n%{http_code}" "https://api.argyros.xyz/api/v1/quote?inputMint=INVALID&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000&swapMode=ExactIn")
+http_code=$(echo "$response" | tail -1)
+body=$(echo "$response" | head -1)
+
+if [ "$http_code" != "200" ]; then
+  echo "Error ($http_code): $body"
+fi
+```
+
+```typescript TypeScript
+const response = await fetch(
+  "https://api.argyros.xyz/api/v1/quote?" +
+    new URLSearchParams({
+      inputMint: "So11111111111111111111111111111111111111112",
+      outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      amount: "1000000000",
+      swapMode: "ExactIn",
+    })
+);
+
+const result = await response.json();
+
+if (!result.success) {
+  switch (result.error) {
+    case "no route found":
+      console.log("No swap route available. Try a smaller amount.");
+      break;
+    case "insufficient liquidity":
+      console.log("Not enough liquidity. Reduce the amount.");
+      break;
+    default:
+      console.error(`API error: ${result.error}`);
+  }
+}
+```
+
+```python Python
+import requests
+
+resp = requests.get("https://api.argyros.xyz/api/v1/quote", params={
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "1000000000",
+    "swapMode": "ExactIn",
+})
+
+result = resp.json()
+
+if not result["success"]:
+    error = result["error"]
+    if error == "no route found":
+        print("No swap route available. Try a smaller amount.")
+    elif error == "insufficient liquidity":
+        print("Not enough liquidity. Reduce the amount.")
+    else:
+        print(f"API error: {error}")
+```
+</CodeGroup>
+
+## Simulation errors
+
+When `skipSimulation` is `false` (default), the swap endpoint simulates the transaction before returning it. Check the `simulation` field in the response:
+
+```json
+{
+  "simulation": {
+    "success": false,
+    "error": "insufficient funds",
+    "insufficientFunds": true,
+    "slippageExceeded": false,
+    "computeUnitsConsumed": 0,
+    "logs": ["Program log: Error: insufficient lamports"]
+  }
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `insufficientFunds` | Wallet doesn't have enough tokens for the swap + transaction fees |
+| `slippageExceeded` | Price moved beyond the slippage tolerance between quote and transaction build |
+
+## On-chain transaction errors
+
+Even after a successful simulation, the transaction can fail on-chain if conditions change between simulation and confirmation.
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `SlippageExceeded` | Price moved after submission | Increase `slippageBps` or retry quickly |
+| `InsufficientFunds` | Balance changed between simulation and execution | Re-check balance before submitting |
+| `BlockhashExpired` | Transaction took too long to confirm | Rebuild the transaction and resubmit |
+
+## Retry strategy
+
+| Error category | Action |
+|----------------|--------|
+| Quote failures (404) | Retry after 1-2 seconds. Liquidity can appear as pools rebalance. |
+| Rate limits (429) | Exponential backoff: 1s, 2s, 4s, 8s. Max 3 retries. |
+| Simulation failures (500) | Re-fetch a fresh quote and rebuild. Don't retry the same transaction. |
+| On-chain failures | Get a new quote (prices have likely changed) and rebuild from scratch. |

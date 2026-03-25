@@ -1,0 +1,175 @@
+---
+title: "Get Quote"
+description: "How to request a swap quote and interpret routing, price impact, and slippage fields."
+llmDescription: "Detailed guide for GET /api/v1/quote on Fogo. Covers all parameters (inputMint, outputMint, amount, swapMode, slippageBps), complete response schema (QuoteResponse with RouteInfo array, price impact fields, otherAmountThreshold), cURL, TypeScript, and Python examples, and price impact severity guidance. Solana chain support coming soon."
+---
+
+# Get Quote
+
+`GET /api/v1/quote` returns the best swap route for a token pair, including estimated amounts, price impact, fee breakdown, and route details.
+
+## Parameters
+
+<ParamField query="inputMint" type="string" required>
+  Input token mint address (Solana base58 public key).
+</ParamField>
+
+<ParamField query="outputMint" type="string" required>
+  Output token mint address (Solana base58 public key).
+</ParamField>
+
+<ParamField query="amount" type="string" required>
+  Amount in smallest token units. For SOL (9 decimals): `1000000000` = 1 SOL. For USDC (6 decimals): `1000000` = 1 USDC.
+</ParamField>
+
+<ParamField query="swapMode" type="string" required>
+  `ExactIn`: amount is the exact input, output is estimated.
+  `ExactOut`: amount is the exact desired output, input is estimated.
+</ParamField>
+
+<ParamField query="slippageBps" type="integer" default="50">
+  Slippage tolerance in basis points (1 bps = 0.01%). Default: 50 (0.5%).
+</ParamField>
+
+## Example
+
+<CodeGroup>
+```bash cURL
+curl "https://api.argyros.xyz/api/v1/quote?\
+inputMint=So11111111111111111111111111111111111111112&\
+outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&\
+amount=1000000000&\
+swapMode=ExactIn&\
+slippageBps=50"
+```
+
+```typescript TypeScript
+const params = new URLSearchParams({
+  inputMint: "So11111111111111111111111111111111111111112",
+  outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  amount: "1000000000",
+  swapMode: "ExactIn",
+  slippageBps: "50",
+});
+
+const response = await fetch(
+  `https://api.argyros.xyz/api/v1/quote?${params}`
+);
+const { success, data, error } = await response.json();
+
+if (!success) throw new Error(error);
+
+console.log(`Output: ${data.amountOut}`);
+console.log(`Price impact: ${data.priceImpactPercent}`);
+console.log(`Route: ${data.hopCount} hop(s) via ${data.routes.map(r => r.poolType).join(" → ")}`);
+```
+
+```python Python
+import requests
+
+resp = requests.get("https://api.argyros.xyz/api/v1/quote", params={
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "1000000000",
+    "swapMode": "ExactIn",
+    "slippageBps": "50",
+})
+result = resp.json()
+if not result["success"]:
+    raise Exception(result["error"])
+
+data = result["data"]
+print(f"Output: {data['amountOut']}")
+print(f"Price impact: {data['priceImpactPercent']}")
+pool_types = " → ".join(r["poolType"] for r in data["routes"])
+print(f"Route: {data['hopCount']} hop(s) via {pool_types}")
+```
+</CodeGroup>
+
+## Response
+
+<ResponseExample>
+```json 200 — Success
+{
+  "success": true,
+  "data": {
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amountIn": "1000000000",
+    "amountOut": "145320000",
+    "priceImpactBps": 25,
+    "priceImpactPercent": "0.25%",
+    "priceImpactSeverity": "low",
+    "priceImpactWarning": "Price impact is low",
+    "feeBps": 25,
+    "routes": [
+      {
+        "poolAddress": "HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ",
+        "poolType": "Vortex",
+        "percent": 100,
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      }
+    ],
+    "routePath": [
+      "So11111111111111111111111111111111111111112",
+      "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    ],
+    "hopCount": 1,
+    "otherAmountThreshold": "144593400"
+  }
+}
+```
+
+```json 404 — No route
+{
+  "success": false,
+  "error": "no route found"
+}
+```
+</ResponseExample>
+
+## Response fields
+
+<ResponseField name="inputMint" type="string">Input token mint address.</ResponseField>
+<ResponseField name="outputMint" type="string">Output token mint address.</ResponseField>
+<ResponseField name="amountIn" type="string">Input amount in smallest units. For `ExactIn`: same as requested. For `ExactOut`: calculated.</ResponseField>
+<ResponseField name="amountOut" type="string">Output amount in smallest units. For `ExactIn`: calculated. For `ExactOut`: same as requested.</ResponseField>
+
+<ResponseField name="priceImpactBps" type="integer">Price impact in basis points.</ResponseField>
+<ResponseField name="priceImpactPercent" type="string">Human-readable price impact (e.g., `"0.25%"`).</ResponseField>
+<ResponseField name="priceImpactSeverity" type="string">
+  Severity classification:
+
+  | Value | Range |
+  |-------|-------|
+  | `none` | < 0.1% |
+  | `low` | 0.1% – 1% |
+  | `moderate` | 1% – 3% |
+  | `high` | 3% – 5% |
+  | `extreme` | > 5% |
+</ResponseField>
+<ResponseField name="priceImpactWarning" type="string">Warning message. Empty if impact is negligible.</ResponseField>
+
+<ResponseField name="feeBps" type="integer">Total pool fee across all hops in basis points.</ResponseField>
+
+<ResponseField name="routes" type="RouteInfo[]">
+  Array of hops in the route.
+  <Expandable title="RouteInfo fields">
+    <ResponseField name="poolAddress" type="string">Pool address for this hop.</ResponseField>
+    <ResponseField name="poolType" type="string">Pool type. On Fogo: `Vortex`, `Fluxbeam`, `PumpFun`. When Solana launches: also `Raydium`, `Orca`, `Meteora`.</ResponseField>
+    <ResponseField name="percent" type="integer">Percentage of amount routed through this pool (100 for single route).</ResponseField>
+    <ResponseField name="inputMint" type="string">Input token for this hop.</ResponseField>
+    <ResponseField name="outputMint" type="string">Output token for this hop.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="routePath" type="string[]">Token path from input to output. Direct: `[inputMint, outputMint]`. Multi-hop: `[inputMint, ...intermediates, outputMint]`.</ResponseField>
+<ResponseField name="hopCount" type="integer">Number of hops. 1 = direct swap, 2+ = multi-hop.</ResponseField>
+<ResponseField name="otherAmountThreshold" type="string">Slippage-adjusted threshold. `ExactIn`: minimum output you'll receive. `ExactOut`: maximum input you'll spend.</ResponseField>
+
+## Price impact guidance
+
+- **`none` / `low`**: Safe to proceed.
+- **`moderate`**: Consider splitting into smaller trades.
+- **`high` / `extreme`**: Large trade relative to available liquidity. Review carefully before proceeding. The `priceImpactWarning` field will contain a human-readable message.

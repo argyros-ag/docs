@@ -1,0 +1,76 @@
+---
+title: "Rate Limits"
+description: "Request rate limits and retry strategy for the Argyros API."
+llmDescription: "Argyros API rate limits. Default: 60 requests/minute, 10 requests/second burst. Covers the 429 response format, exponential backoff retry strategy with cURL, TypeScript, and Python examples, and best practices (cache quotes, batch wisely, use instructions endpoint)."
+---
+
+The Argyros API applies rate limiting to ensure fair usage and service stability.
+
+## Limits
+
+| Tier | Rate | Burst |
+|------|------|-------|
+| Default | 60 requests/minute | 10 requests/second |
+
+<Note>
+Rate limits are subject to change. Contact the team for higher limits if you need them for production integrations.
+</Note>
+
+## Rate limit response
+
+When rate limited, the API returns HTTP `429`:
+
+```json
+{
+  "success": false,
+  "error": "rate limit exceeded"
+}
+```
+
+## Retry strategy
+
+Use exponential backoff when you receive a `429`:
+
+<CodeGroup>
+```bash cURL
+for i in 1 2 3; do
+  response=$(curl -s -w "\n%{http_code}" "https://api.argyros.xyz/api/v1/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000&swapMode=ExactIn")
+  http_code=$(echo "$response" | tail -1)
+  [ "$http_code" != "429" ] && echo "$response" && break
+  sleep $((2 ** i))
+done
+```
+
+```typescript TypeScript
+async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, options);
+
+    if (response.status !== 429) return response;
+
+    const delay = Math.pow(2, attempt) * 1000;
+    await new Promise((r) => setTimeout(r, delay));
+  }
+  throw new Error("Rate limit exceeded after retries");
+}
+```
+
+```python Python
+import time
+import requests
+
+def fetch_with_retry(url, max_retries=3, **kwargs):
+    for attempt in range(max_retries + 1):
+        resp = requests.request(**kwargs, url=url)
+        if resp.status_code != 429:
+            return resp
+        time.sleep(2 ** attempt)
+    raise Exception("Rate limit exceeded after retries")
+```
+</CodeGroup>
+
+## Best practices
+
+- **Cache quotes.** Quotes are valid for roughly 60 seconds (until `lastValidBlockHeight` expires). Don't re-fetch if you already have a recent quote.
+- **Batch wisely.** If you need quotes for multiple pairs, space requests to stay within the rate limit.
+- **Use instructions endpoint.** If you're building custom transactions, one `POST /api/v1/instructions` call replaces a `GET /api/v1/quote` + `POST /api/v1/swap` pair.

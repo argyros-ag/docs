@@ -1,0 +1,45 @@
+# Argyros
+
+> Argyros is a swap aggregator on Fogo providing best-price multi-hop routing across Vortex, Fluxbeam, and Fogo.fun bonding curves. Solana support with P-Token benefits coming soon.
+> Base URL: `https://api.argyros.xyz`. Three core endpoints: GET /api/v1/quote, POST /api/v1/swap, POST /api/v1/instructions.
+
+## Get Started
+
+- [Introduction](https://argyros.xyz/get-started/introduction): Introduction to Argyros, a swap aggregator on Fogo (Solana coming soon). Covers what Argyros is, its value props (best-price multi-hop routing, fast execution, simple 3-endpoint API), the endpoint table (GET /api/v1/quote, POST /api/v1/swap, POST /api/v1/instructions, GET /health), and quick cURL + TypeScript + Python examples for getting a SOL→USDC quote on Fogo.
+- [Architecture](https://argyros.xyz/get-started/architecture): High-level architecture of Argyros on Fogo. Covers the data flow (client → API → Fogo network), components (API server, routing engine, on-chain program), supported DEXs (Vortex, Fluxbeam, Fogo.fun bonding curves), and the two integration paths: POST /api/v1/swap for ready-to-sign transactions vs POST /api/v1/instructions for custom transaction composition. Solana support coming soon.
+- [FAQ](https://argyros.xyz/get-started/faq): Frequently asked questions about Argyros. Covers supported chains (Fogo live, Solana coming soon), P-Token benefits preview, supported tokens on Fogo (Vortex, Fluxbeam, Fogo.fun), quote freshness, devnet support, transaction size limits, ExactIn vs ExactOut, fee structure, rate limits, multi-hop behavior, and how to monitor API status.
+
+## Docs — Swap
+
+- [Swap Overview](https://argyros.xyz/docs/swap/overview): Overview of the Argyros swap lifecycle on Fogo: get quote, build transaction or get instructions, sign and submit. Explains when to use POST /swap vs POST /instructions, ExactIn vs ExactOut swap modes, Fogo capabilities (5 max hops, Vortex/Fluxbeam/Fogo.fun DEXs), supported tokens, and links to detailed pages for each step. Solana support coming soon.
+- [Get Quote](https://argyros.xyz/docs/swap/get-quote): Detailed guide for GET /api/v1/quote on Fogo. Covers all parameters (inputMint, outputMint, amount, swapMode, slippageBps), complete response schema (QuoteResponse with RouteInfo array, price impact fields, otherAmountThreshold), cURL, TypeScript, and Python examples, and price impact severity guidance. Solana chain support coming soon.
+- [Build Transaction](https://argyros.xyz/docs/swap/build-transaction): Detailed guide for POST /api/v1/swap on Fogo. Covers request body (userWallet, inputMint, outputMint, amount, swapMode, slippageBps, skipSimulation), complete response schema (SwapHandlerResponse with base64 transaction, lastValidBlockHeight, SimulationResult), simulation error handling, and cURL + TypeScript + Python examples. Solana chain support coming soon.
+- [Get Instructions](https://argyros.xyz/docs/swap/get-instructions): Detailed guide for POST /api/v1/instructions on Fogo. Explains when to use instructions instead of swap (custom transaction composition, adding memos, creating accounts). Covers request body, response schema (InstructionsResponse with RawInstruction array, addressLookupTableAddresses), and complete TypeScript example for building a v0 transaction from raw instructions with Address Lookup Tables. Solana chain support coming soon.
+- [Send Transaction](https://argyros.xyz/docs/swap/send-transaction): How to sign, submit, and confirm an Argyros swap transaction on Fogo. Covers deserializing the base64 transaction from POST /api/v1/swap, signing with @solana/web3.js VersionedTransaction, sendRawTransaction, confirmTransaction with lastValidBlockHeight, transaction expiry handling, retry strategy, preflight checks, and confirmation levels (processed, confirmed, finalized). Includes TypeScript and Python examples.
+
+## Docs — Concepts
+
+- [Supported Chains](https://argyros.xyz/concepts/chains): Argyros currently supports Fogo as the primary chain. Solana support with P-Token benefits (up to 7 hops, lower compute costs, better route optimization) is coming soon. Covers Fogo capabilities, the upcoming Solana chain parameter, and what to expect when Solana launches.
+- [Routing](https://argyros.xyz/concepts/routing): How Argyros routing works at a high level on Fogo. Covers direct swaps, multi-hop routing through intermediate tokens (up to 5 hops), supported liquidity sources (Vortex, Fluxbeam, Fogo.fun bonding curves), price impact severity levels, and slippage protection mechanics. Solana support coming soon with up to 7 hops via P-Token.
+- [Fees](https://argyros.xyz/concepts/fees): Argyros fee structure on Fogo. Covers pool fees (set by DEX operators like Vortex, Fluxbeam, and Fogo.fun, shown in feeBps), aggregator protocol fees (shown in feeAmount), and the no-hidden-fees guarantee where amountIn/amountOut already account for all fees.
+- [Security](https://argyros.xyz/concepts/security): Argyros security model on Fogo. Covers non-custodial design (API returns unsigned transactions, user's wallet signs and submits directly), atomic execution (multi-hop reverts if any hop fails), slippage protection (on-chain enforcement via slippageBps), and open-source verification of on-chain program instructions.
+
+## API Reference
+
+- [API Reference Overview](https://argyros.xyz/api-reference/introduction): Argyros API reference overview. Base URL: https://api.argyros.xyz. Currently supports Fogo chain (Solana coming soon). Covers the JSON response envelope ({success, data, error}), HTTP status codes (200, 400, 404, 429, 500), and the endpoint table with links to GET /api/v1/quote, POST /api/v1/swap, POST /api/v1/instructions, and GET /health.
+- [Rate Limits](https://argyros.xyz/api-reference/rate-limits): Argyros API rate limits. Default: 60 requests/minute, 10 requests/second burst. Covers the 429 response format, exponential backoff retry strategy with cURL, TypeScript, and Python examples, and best practices (cache quotes, batch wisely, use instructions endpoint).
+- [Error Codes](https://argyros.xyz/api-reference/errors): Complete Argyros error reference. Covers HTTP status codes, per-endpoint error messages (quote: invalid inputMint, no route found, insufficient liquidity; swap: invalid user wallet, simulation failed; instructions: missing pool data), SimulationResult fields (insufficientFunds, slippageExceeded), and on-chain errors (SlippageExceeded, BlockhashExpired, InvalidAccountData) with recovery actions.
+
+## Guides
+
+- [Executing Swaps](https://argyros.xyz/guides/executing-swaps): Step-by-step guide to executing a token swap on Argyros on Fogo. Covers the full flow: GET /api/v1/quote (with cURL + TypeScript + Python), POST /api/v1/swap to build the transaction, then sign with @solana/web3.js VersionedTransaction, sendRawTransaction, and confirmTransaction. Includes complete runnable code examples. Solana chain support coming soon.
+- [Handling Errors](https://argyros.xyz/guides/handling-errors): Error handling guide for the Argyros API on Fogo. Covers the error response format, common HTTP errors (400, 404, 429, 500) with causes and fixes, simulation error fields (insufficientFunds, slippageExceeded), on-chain transaction errors (SlippageExceeded, BlockhashExpired), and retry strategy with cURL, TypeScript, and Python examples for each error category.
+- [Embedding Swap in a dApp](https://argyros.xyz/guides/embedding-swap): Complete guide to embedding Argyros swap in a React web app on Fogo. Includes TypeScript functions for getQuote and buildSwapTransaction, an executeSwap function using @solana/wallet-adapter-react signTransaction, a full React SwapButton component example, error handling table for UI messages, and best practices (show price impact, refresh quotes, handle rate limits). Solana chain support coming soon.
+
+## AI
+
+- [AI Integration](https://argyros.xyz/ai/overview): Overview of AI-friendly resources for Argyros. Covers llms.txt (LLM-optimized site index for discovering relevant pages), skill.md (decision-tree playbook for AI agents to route intents to the correct API endpoints), and how to use these resources for automated swap integration.
+
+## Updates
+
+- [Changelog](https://argyros.xyz/updates/index): Argyros API changelog. Tracks API updates, new features, breaking changes, and deprecations in reverse chronological order.

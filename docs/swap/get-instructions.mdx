@@ -1,0 +1,220 @@
+---
+title: "Get Instructions"
+description: "Get raw instructions for composing swaps into custom transactions."
+llmDescription: "Detailed guide for POST /api/v1/instructions on Fogo. Explains when to use instructions instead of swap (custom transaction composition, adding memos, creating accounts). Covers request body, response schema (InstructionsResponse with RawInstruction array, addressLookupTableAddresses), and complete TypeScript example for building a v0 transaction from raw instructions with Address Lookup Tables. Solana chain support coming soon."
+---
+
+# Get Instructions
+
+`POST /api/v1/instructions` returns raw Solana instructions instead of a complete transaction. Use this when you need to combine swap instructions with other logic in a single transaction.
+
+## When to use this instead of `/swap`
+
+- You need to **create token accounts** before the swap.
+- You want to **add a memo instruction** for tracking.
+- You need to **close accounts** after the swap.
+- You're building a **multi-action transaction** (e.g., swap + stake in one tx).
+- You want full control over **compute budget** and **priority fees**.
+
+If you just need a simple swap, use [`POST /swap`](/docs/swap/build-transaction) instead.
+
+## Request
+
+The request body is identical to `/swap` except there is no `skipSimulation` field (no transaction is built, so there's nothing to simulate).
+
+<ParamField body="userWallet" type="string" required>
+  User's wallet address (signer).
+</ParamField>
+
+<ParamField body="inputMint" type="string" required>
+  Input token mint address.
+</ParamField>
+
+<ParamField body="outputMint" type="string" required>
+  Output token mint address.
+</ParamField>
+
+<ParamField body="amount" type="string" required>
+  Amount in smallest token units.
+</ParamField>
+
+<ParamField body="swapMode" type="string" required>
+  `ExactIn` or `ExactOut`.
+</ParamField>
+
+<ParamField body="slippageBps" type="integer" default="50">
+  Slippage tolerance in basis points.
+</ParamField>
+
+## Example
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.argyros.xyz/api/v1/instructions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userWallet": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "1000000000",
+    "swapMode": "ExactIn",
+    "slippageBps": 50
+  }'
+```
+
+```typescript TypeScript
+const response = await fetch("https://api.argyros.xyz/api/v1/instructions", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    userWallet: wallet.publicKey.toBase58(),
+    inputMint: "So11111111111111111111111111111111111111112",
+    outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    amount: "1000000000",
+    swapMode: "ExactIn",
+    slippageBps: 50,
+  }),
+});
+
+const { success, data, error } = await response.json();
+if (!success) throw new Error(error);
+
+console.log(`${data.instructions.length} instructions, ${data.hopCount} hop(s)`);
+```
+
+```python Python
+import requests
+
+resp = requests.post("https://api.argyros.xyz/api/v1/instructions", json={
+    "userWallet": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "1000000000",
+    "swapMode": "ExactIn",
+    "slippageBps": 50,
+})
+result = resp.json()
+if not result["success"]:
+    raise Exception(result["error"])
+
+data = result["data"]
+print(f"{len(data['instructions'])} instructions, {data['hopCount']} hop(s)")
+```
+</CodeGroup>
+
+## Response
+
+<ResponseExample>
+```json 200 — Success
+{
+  "success": true,
+  "data": {
+    "amountIn": "1000000000",
+    "amountOut": "145320000",
+    "otherAmountThreshold": "144593400",
+    "feeAmount": "100005",
+    "route": [
+      "So11111111111111111111111111111111111111112",
+      "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    ],
+    "hopCount": 1,
+    "pools": ["HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ"],
+    "instructions": [
+      {
+        "programId": "vnt1u7PzorND5JjweFWmDawKe2hLWoTwHU6QKz6XX98",
+        "data": "AQAAAA...",
+        "accounts": [
+          { "publicKey": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM", "isSigner": true, "isWritable": true },
+          { "publicKey": "HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ", "isSigner": false, "isWritable": true }
+        ]
+      }
+    ],
+    "addressLookupTableAddresses": [
+      "AddressLookupTab1e1111111111111111111111111"
+    ]
+  }
+}
+```
+</ResponseExample>
+
+## Response fields
+
+<ResponseField name="amountIn" type="string">Input amount in smallest units.</ResponseField>
+<ResponseField name="amountOut" type="string">Estimated output amount.</ResponseField>
+<ResponseField name="otherAmountThreshold" type="string">Slippage-adjusted threshold. `ExactIn`: minimum output. `ExactOut`: maximum input.</ResponseField>
+<ResponseField name="feeAmount" type="string">Aggregator fee in output token units.</ResponseField>
+<ResponseField name="route" type="string[]">Token path from input to output.</ResponseField>
+<ResponseField name="hopCount" type="integer">Number of swap hops.</ResponseField>
+<ResponseField name="pools" type="string[]">Pool addresses used.</ResponseField>
+
+<ResponseField name="instructions" type="RawInstruction[]">
+  Ordered list of instructions to include in the transaction.
+  <Expandable title="RawInstruction fields">
+    <ResponseField name="programId" type="string">Base58-encoded program ID.</ResponseField>
+    <ResponseField name="data" type="string">Base64-encoded instruction data.</ResponseField>
+    <ResponseField name="accounts" type="RawAccountMeta[]">
+      Account list for this instruction.
+      <Expandable title="RawAccountMeta fields">
+        <ResponseField name="publicKey" type="string">Base58-encoded account public key.</ResponseField>
+        <ResponseField name="isSigner" type="boolean">Whether this account must sign the transaction.</ResponseField>
+        <ResponseField name="isWritable" type="boolean">Whether this account is written to.</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="addressLookupTableAddresses" type="string[]">
+  Address Lookup Table (ALT) addresses. Include these when building a **v0 transaction** to reduce transaction size.
+</ResponseField>
+
+## Building a transaction from instructions
+
+```typescript TypeScript
+import {
+  Connection,
+  TransactionMessage,
+  VersionedTransaction,
+  PublicKey,
+  AddressLookupTableAccount,
+} from "@solana/web3.js";
+
+const connection = new Connection("https://api.mainnet-beta.solana.com");
+
+// 1. Fetch address lookup tables
+const altAccounts: AddressLookupTableAccount[] = [];
+for (const altAddress of data.addressLookupTableAddresses) {
+  const altAccount = await connection.getAddressLookupTable(new PublicKey(altAddress));
+  if (altAccount.value) altAccounts.push(altAccount.value);
+}
+
+// 2. Convert raw instructions to TransactionInstruction
+const instructions = data.instructions.map((ix) => ({
+  programId: new PublicKey(ix.programId),
+  keys: ix.accounts.map((acc) => ({
+    pubkey: new PublicKey(acc.publicKey),
+    isSigner: acc.isSigner,
+    isWritable: acc.isWritable,
+  })),
+  data: Buffer.from(ix.data, "base64"),
+}));
+
+// 3. Build v0 transaction
+const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+
+const messageV0 = new TransactionMessage({
+  payerKey: wallet.publicKey,
+  recentBlockhash: blockhash,
+  instructions,
+}).compileToV0Message(altAccounts);
+
+const transaction = new VersionedTransaction(messageV0);
+transaction.sign([wallet]);
+
+// 4. Submit
+const signature = await connection.sendRawTransaction(transaction.serialize());
+await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight });
+```
+
+<Warning>
+Always include the `addressLookupTableAddresses` when building a v0 transaction. Without them, the transaction may exceed the size limit for multi-hop routes.
+</Warning>

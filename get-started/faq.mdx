@@ -1,0 +1,99 @@
+---
+title: "FAQ"
+description: "Frequently asked questions about the Argyros API."
+llmDescription: "Frequently asked questions about Argyros. Covers supported chains (Fogo live, Solana coming soon), P-Token benefits preview, supported tokens on Fogo (Vortex, Fluxbeam, Fogo.fun), quote freshness, devnet support, transaction size limits, ExactIn vs ExactOut, fee structure, rate limits, multi-hop behavior, and how to monitor API status."
+---
+
+## General
+
+<AccordionGroup>
+
+<Accordion title="What chains are supported?">
+Argyros currently runs on **Fogo**. **Solana support is coming soon.** When it launches, you will be able to switch chains with a single `chain` query parameter.
+
+See [Supported Chains](/concepts/chains) for full details.
+</Accordion>
+
+<Accordion title="What will Solana support bring?">
+When Solana launches, Argyros will use **P-Token**, an optimized token program that enables:
+
+- Up to **7 hops** (vs 5 on Fogo) for deeper route search
+- **Lower compute costs** per transaction
+- Access to **Raydium, Orca, and Meteora** pools
+
+The API shape will be identical. Add `chain=solana` to your requests when it goes live.
+</Accordion>
+
+<Accordion title="What is P-Token?">
+P-Token is a Pinocchio-based reimplementation of SPL Token on Solana that uses significantly less compute units (CU) per token operation. This frees up compute budget, allowing the routing engine to fit more hops into a single transaction and find better prices for complex swaps.
+
+From an integrator's perspective, P-Token will be transparent: the API handles it automatically.
+</Accordion>
+
+<Accordion title="What tokens are supported?">
+Any SPL token with liquidity on a supported DEX on Fogo: Vortex, Fluxbeam, or Fogo.fun. If a direct pool doesn't exist, the routing engine tries multi-hop paths through intermediate tokens like SOL or USDC.
+
+If `GET /api/v1/quote` returns `no route found`, the token either has no listed pools or insufficient liquidity for the requested amount.
+</Accordion>
+
+</AccordionGroup>
+
+## Quotes and pricing
+
+<AccordionGroup>
+
+<Accordion title="How fresh are quotes?">
+Quotes reflect real-time pool state at the moment of the request. Prices can change between getting a quote and submitting the transaction. The `otherAmountThreshold` field enforces a minimum output (`ExactIn`) or maximum input (`ExactOut`) on-chain.
+
+Quotes don't have an explicit TTL, but the transaction built from `POST /api/v1/swap` expires at `lastValidBlockHeight` (roughly 60 seconds).
+</Accordion>
+
+<Accordion title="What's the difference between ExactIn and ExactOut?">
+- **ExactIn**: You specify the exact input amount. The API estimates the output. Use when selling a specific amount ("sell exactly 1 SOL").
+- **ExactOut**: You specify the exact output amount. The API estimates the input needed. Use when buying a specific amount ("buy exactly 100 USDC").
+
+Both modes enforce slippage protection on-chain.
+</Accordion>
+
+<Accordion title="How are fees calculated?">
+Two types of fees:
+1. **Pool fees** set by the DEX operators. Shown in `feeBps` in the quote response.
+2. **Aggregator fee** on certain routes. Shown in `feeAmount` in the swap/instructions response.
+
+The `amountIn` and `amountOut` values already account for all fees. No hidden charges.
+</Accordion>
+
+</AccordionGroup>
+
+## Technical
+
+<AccordionGroup>
+
+<Accordion title="Is devnet supported?">
+Not currently. The API operates on Fogo mainnet only. Devnet support may be added in the future.
+</Accordion>
+
+<Accordion title="What's the maximum transaction size?">
+Transactions have a 1232-byte limit. For multi-hop routes with many accounts, the API uses Address Lookup Tables (ALTs) to compress the transaction. If you use `POST /api/v1/instructions`, include the `addressLookupTableAddresses` when building a v0 transaction.
+</Accordion>
+
+<Accordion title="What are the rate limits?">
+Default: 60 requests/minute, 10 requests/second burst. If you hit a `429` response, use exponential backoff (1s, 2s, 4s). Contact the team for higher limits for production integrations.
+</Accordion>
+
+<Accordion title="When should I use /swap vs /instructions?">
+- Use **`POST /api/v1/swap`** for the simplest integration. You get a ready-to-sign transaction.
+- Use **`POST /api/v1/instructions`** when you need to compose the swap with other instructions in a single transaction (e.g., creating token accounts, adding memos, closing accounts).
+
+Both use the same routing engine and produce the same on-chain result.
+</Accordion>
+
+<Accordion title="What happens if a multi-hop swap partially fails?">
+Nothing. All swap instructions execute atomically on-chain. If any hop fails (insufficient liquidity, slippage exceeded, etc.), the entire transaction reverts. No partial fills, no stuck funds.
+</Accordion>
+
+<Accordion title="How do I monitor API status?">
+Call `GET https://api.argyros.xyz/health`. It returns `{"status": "ok"}` when the service is running. For production integrations, poll this endpoint periodically and alert if it returns a non-200 status.
+</Accordion>
+
+</AccordionGroup>

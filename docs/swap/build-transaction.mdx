@@ -1,0 +1,173 @@
+---
+title: "Build Transaction"
+description: "Build an unsigned swap transaction using POST /api/v1/swap."
+llmDescription: "Detailed guide for POST /api/v1/swap on Fogo. Covers request body (userWallet, inputMint, outputMint, amount, swapMode, slippageBps, skipSimulation), complete response schema (SwapHandlerResponse with base64 transaction, lastValidBlockHeight, SimulationResult), simulation error handling, and cURL + TypeScript + Python examples. Solana chain support coming soon."
+---
+
+# Build Transaction
+
+`POST /api/v1/swap` builds a complete unsigned Solana transaction for a token swap. Sign it with the user's wallet and submit to the network.
+
+## Request
+
+<ParamField body="userWallet" type="string" required>
+  User's wallet address (base58). This wallet signs and pays for the transaction.
+</ParamField>
+
+<ParamField body="inputMint" type="string" required>
+  Input token mint address.
+</ParamField>
+
+<ParamField body="outputMint" type="string" required>
+  Output token mint address.
+</ParamField>
+
+<ParamField body="amount" type="string" required>
+  Amount in smallest token units.
+</ParamField>
+
+<ParamField body="swapMode" type="string" required>
+  `ExactIn` or `ExactOut`.
+</ParamField>
+
+<ParamField body="slippageBps" type="integer" default="50">
+  Slippage tolerance in basis points. Default: 50 (0.5%).
+</ParamField>
+
+<ParamField body="skipSimulation" type="boolean" default="false">
+  Skip transaction simulation. Faster but no pre-flight validation. Only set `true` if you handle validation yourself.
+</ParamField>
+
+## Example
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.argyros.xyz/api/v1/swap" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userWallet": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "1000000000",
+    "swapMode": "ExactIn",
+    "slippageBps": 50
+  }'
+```
+
+```typescript TypeScript
+const response = await fetch("https://api.argyros.xyz/api/v1/swap", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    userWallet: wallet.publicKey.toBase58(),
+    inputMint: "So11111111111111111111111111111111111111112",
+    outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    amount: "1000000000",
+    swapMode: "ExactIn",
+    slippageBps: 50,
+  }),
+});
+
+const { success, data, error } = await response.json();
+if (!success) throw new Error(error);
+
+console.log(`Transaction built. Expires at block ${data.lastValidBlockHeight}`);
+```
+
+```python Python
+import requests
+
+resp = requests.post("https://api.argyros.xyz/api/v1/swap", json={
+    "userWallet": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "1000000000",
+    "swapMode": "ExactIn",
+    "slippageBps": 50,
+})
+result = resp.json()
+if not result["success"]:
+    raise Exception(result["error"])
+
+data = result["data"]
+print(f"Transaction built. Expires at block {data['lastValidBlockHeight']}")
+```
+</CodeGroup>
+
+## Response
+
+<ResponseExample>
+```json 200 — Success
+{
+  "success": true,
+  "data": {
+    "transaction": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQAHEAo...",
+    "lastValidBlockHeight": 245832190,
+    "amountIn": "1000000000",
+    "amountOut": "145320000",
+    "minAmountOut": "144593400",
+    "feeAmount": "0",
+    "simulation": {
+      "success": true,
+      "logs": [],
+      "computeUnitsConsumed": 85000,
+      "insufficientFunds": false,
+      "slippageExceeded": false
+    },
+    "computeUnitsEstimate": 85000,
+    "route": [
+      "So11111111111111111111111111111111111111112",
+      "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    ],
+    "hopCount": 1,
+    "pools": ["HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ"],
+    "isSplitRoute": false
+  }
+}
+```
+</ResponseExample>
+
+## Response fields
+
+<ResponseField name="transaction" type="string">Base64-encoded unsigned transaction. Deserialize, sign, and submit.</ResponseField>
+<ResponseField name="lastValidBlockHeight" type="integer">Transaction expires after this block height (~60 seconds from creation).</ResponseField>
+<ResponseField name="amountIn" type="string">Input amount in smallest units.</ResponseField>
+<ResponseField name="amountOut" type="string">Estimated output amount in smallest units.</ResponseField>
+<ResponseField name="minAmountOut" type="string">Minimum output after slippage (`ExactIn` only). Transaction reverts if actual output is less.</ResponseField>
+<ResponseField name="maxAmountIn" type="string">Maximum input after slippage (`ExactOut` only). Transaction reverts if actual input exceeds this.</ResponseField>
+<ResponseField name="feeAmount" type="string">Aggregator fee in output token units.</ResponseField>
+
+<ResponseField name="simulation" type="object">
+  Simulation result (omitted if `skipSimulation: true`).
+  <Expandable title="SimulationResult fields">
+    <ResponseField name="success" type="boolean">Whether the simulation passed.</ResponseField>
+    <ResponseField name="logs" type="string[]">Program log output.</ResponseField>
+    <ResponseField name="computeUnitsConsumed" type="integer">CU used during simulation.</ResponseField>
+    <ResponseField name="error" type="string">Error message if simulation failed.</ResponseField>
+    <ResponseField name="insufficientFunds" type="boolean">Wallet doesn't have enough balance.</ResponseField>
+    <ResponseField name="slippageExceeded" type="boolean">Price moved beyond tolerance.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="computeUnitsEstimate" type="integer">Estimated compute units for execution.</ResponseField>
+<ResponseField name="route" type="string[]">Token path from input to output.</ResponseField>
+<ResponseField name="hopCount" type="integer">Number of swap hops.</ResponseField>
+<ResponseField name="pools" type="string[]">Pool addresses used, in execution order.</ResponseField>
+<ResponseField name="isSplitRoute" type="boolean">Whether liquidity is split across multiple pools.</ResponseField>
+<ResponseField name="splitPercents" type="integer[]">Percentage split per pool (only if `isSplitRoute` is true).</ResponseField>
+
+## Simulation
+
+By default, the API simulates the transaction before returning it. This catches common issues early:
+
+| `simulation` field | Meaning | What to do |
+|--------------------|---------|------------|
+| `insufficientFunds: true` | Wallet doesn't have enough tokens or SOL for fees | Show balance error to user |
+| `slippageExceeded: true` | Price changed between quote and transaction build | Retry with a fresh quote |
+| `success: false` + `error` | Other simulation failure | Check `logs` for details |
+
+Set `skipSimulation: true` only if you need lower latency and handle validation yourself.
+
+## What's next
+
+After receiving the transaction, [sign and submit it](/docs/swap/send-transaction).

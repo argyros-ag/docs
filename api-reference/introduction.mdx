@@ -1,33 +1,52 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: "API Reference"
+description: "Base URL, response format, and conventions for the Argyros API."
+llmDescription: "Argyros API reference overview. Base URL: https://api.argyros.xyz. Currently supports Fogo chain (Solana coming soon). Covers the JSON response envelope ({success, data, error}), HTTP status codes (200, 400, 404, 429, 500), and the endpoint table with links to GET /api/v1/quote, POST /api/v1/swap, POST /api/v1/instructions, and GET /health."
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+**Base URL**: `https://api.argyros.xyz`
 
-## Welcome
+All swap endpoints are under `/api/v1`. The API currently operates on **Fogo**.
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
+<Info>
+**Solana support coming soon.** When available, all endpoints will accept a `chain` query parameter to select between Fogo and Solana. See [Supported Chains](/concepts/chains).
+</Info>
 
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+## Response format
 
-## Authentication
+All responses use a consistent envelope:
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
-
+**Success:**
 ```json
-"security": [
-  {
-    "bearerAuth": []
-  }
-]
+{
+  "success": true,
+  "data": { ... }
+}
 ```
+
+**Error:**
+```json
+{
+  "success": false,
+  "error": "error message describing what went wrong"
+}
+```
+
+## HTTP status codes
+
+| Code | Meaning |
+|------|---------|
+| `200` | Success |
+| `400` | Bad request: invalid parameters, missing required fields |
+| `404` | Not found: no route exists for the given token pair/amount |
+| `429` | Rate limited: too many requests |
+| `500` | Internal error: transaction build or simulation failed |
+
+## Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `GET https://api.argyros.xyz/api/v1/quote` | GET | Get swap quote with routing details |
+| `POST https://api.argyros.xyz/api/v1/swap` | POST | Build unsigned swap transaction |
+| `POST https://api.argyros.xyz/api/v1/instructions` | POST | Get raw swap instructions |
+| `GET https://api.argyros.xyz/health` | GET | Service health check |
