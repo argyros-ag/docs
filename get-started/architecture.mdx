@@ -1,7 +1,7 @@
 ---
 title: "Architecture"
 description: "How Argyros routes and executes swaps on Fogo."
-llmDescription: "High-level architecture of Argyros on Fogo. Covers the data flow (client → API → Fogo network), components (API server, routing engine, on-chain program), supported DEXs (Vortex, Fluxbeam, Fogo.fun bonding curves), and the two integration paths: POST /api/v1/swap for ready-to-sign transactions vs POST /api/v1/instructions for custom transaction composition. Solana support coming soon."
+llmDescription: "High-level architecture of Argyros on Fogo. Covers the data flow (client → API → Fogo network), components (API server, routing engine, on-chain program), supported DEXs (Vortex, Fluxbeam, Fogo.fun | Moonit bonding curves), and the two integration paths: POST /api/v1/swap for ready-to-sign transactions vs POST /api/v1/instructions for custom transaction composition. Solana support coming soon."
 ---
 
 ## Data flow
@@ -32,7 +32,7 @@ Client                    Argyros API                 Fogo
 
 **Routing Engine.** Off-chain pathfinding that evaluates routes across all supported DEXs on Fogo. Finds direct swaps, multi-hop paths (e.g., Token A → SOL → USDC → Token B), and split routes across multiple pools.
 
-**Supported DEXs.** Vortex (concentrated liquidity), Fluxbeam (AMM), and Fogo.fun (bonding curves).
+**Supported DEXs.** Vortex (concentrated liquidity), Fluxbeam (AMM), Fogo.fun (bonding curves), and Moonit (bonding curves).
 
 **On-chain Program.** Verifies and executes the swap instructions atomically. If any hop fails or slippage is exceeded, the entire transaction reverts.
 

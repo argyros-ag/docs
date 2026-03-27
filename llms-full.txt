@@ -8,7 +8,7 @@ Base URL: `https://api.argyros.xyz`
 
 ## Chain Support
 
-Currently: **Fogo** (5 max hops, Vortex/Fluxbeam/Fogo.fun DEXs).
+Currently: **Fogo** (5 max hops, Vortex/Fluxbeam/Fogo.fun/Moonit DEXs).
 
 **Coming soon**: Solana with P-Token optimization (7 max hops, lower compute, Raydium/Orca/Meteora). When available, a `chain` query parameter will be added to all endpoints.
 
@@ -79,7 +79,7 @@ Get the best swap route and estimated output for a token pair.
 
 - `amountIn` / `amountOut`: In smallest token units. For ExactIn, amountIn=requested, amountOut=calculated. Vice versa for ExactOut.
 - `priceImpactSeverity`: `none` (<0.1%), `low` (0.1-1%), `moderate` (1-3%), `high` (3-5%), `extreme` (>5%).
-- `routes[]`: Each hop. poolAddress, poolType (Fogo: Vortex|Fluxbeam|PumpFun; Solana when live: also Raydium|Orca|Meteora), percent, inputMint, outputMint.
+- `routes[]`: Each hop. poolAddress, poolType (Fogo: Vortex|Fluxbeam|PumpFun|Moonit; Solana when live: also Raydium|Orca|Meteora), percent, inputMint, outputMint.
 - `routePath`: Token mints in order. Direct: [A, B]. Multi-hop: [A, X, Y, B].
 - `otherAmountThreshold`: ExactIn → minimum output. ExactOut → maximum input. Enforced on-chain.
 

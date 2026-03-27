@@ -1,7 +1,7 @@
 ---
 title: "Routing"
 description: "How Argyros finds the best swap path across DEXs on Fogo."
-llmDescription: "How Argyros routing works at a high level on Fogo. Covers direct swaps, multi-hop routing through intermediate tokens (up to 5 hops), supported liquidity sources (Vortex, Fluxbeam, Fogo.fun bonding curves), price impact severity levels, and slippage protection mechanics. Solana support coming soon with up to 7 hops via P-Token."
+llmDescription: "How Argyros routing works at a high level on Fogo. Covers direct swaps, multi-hop routing through intermediate tokens (up to 5 hops), supported liquidity sources (Vortex, Fluxbeam, Fogo.fun, Moonit bonding curves), price impact severity levels, and slippage protection mechanics. Solana support coming soon with up to 7 hops via P-Token."
 ---
 
 # Routing
@@ -35,6 +35,7 @@ The routing engine supports up to **5 hops** on Fogo.
 | Vortex | Concentrated liquidity |
 | Fluxbeam | AMM |
 | Fogo.fun | Bonding curves |
+| Moonit | Bonding curves |
 
 ## Price impact
 

@@ -1,7 +1,7 @@
 ---
 title: "Swap Overview"
 description: "How token swaps work on Argyros and which integration path to choose."
-llmDescription: "Overview of the Argyros swap lifecycle on Fogo: get quote, build transaction or get instructions, sign and submit. Explains when to use POST /swap vs POST /instructions, ExactIn vs ExactOut swap modes, Fogo capabilities (5 max hops, Vortex/Fluxbeam/Fogo.fun DEXs), supported tokens, and links to detailed pages for each step. Solana support coming soon."
+llmDescription: "Overview of the Argyros swap lifecycle on Fogo: get quote, build transaction or get instructions, sign and submit. Explains when to use POST /swap vs POST /instructions, ExactIn vs ExactOut swap modes, Fogo capabilities (5 max hops, Vortex/Fluxbeam/Fogo.fun/Moonit DEXs), supported tokens, and links to detailed pages for each step. Solana support coming soon."
 ---
 
 # Swap Overview
@@ -49,7 +49,7 @@ Both modes support slippage protection. For `ExactIn`, the response includes `mi
 |---------|-------|
 | Max hops | 5 |
 | Compute cost | Standard |
-| Supported DEXs | Vortex, Fluxbeam, Fogo.fun |
+| Supported DEXs | Vortex, Fluxbeam, Fogo.fun, Moonit |
 
 <Info>
 **Solana support coming soon** with P-Token optimization enabling up to 7 hops, lower compute costs, and access to Raydium, Orca, and Meteora pools. See [Supported Chains](/concepts/chains).
@@ -62,6 +62,7 @@ Any SPL token with liquidity on a supported DEX can be swapped. The routing engi
 - Vortex (concentrated liquidity)
 - Fluxbeam (AMM)
 - Fogo.fun (bonding curves)
+- Moonit (bonding curves)
 
 If a direct pool doesn't exist, the engine routes through intermediate tokens (multi-hop).
 

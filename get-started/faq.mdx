@@ -1,7 +1,7 @@
 ---
 title: "FAQ"
 description: "Frequently asked questions about the Argyros API."
-llmDescription: "Frequently asked questions about Argyros. Covers supported chains (Fogo live, Solana coming soon), P-Token benefits preview, supported tokens on Fogo (Vortex, Fluxbeam, Fogo.fun), quote freshness, devnet support, transaction size limits, ExactIn vs ExactOut, fee structure, rate limits, multi-hop behavior, and how to monitor API status."
+llmDescription: "Frequently asked questions about Argyros. Covers supported chains (Fogo live, Solana coming soon), P-Token benefits preview, supported tokens on Fogo (Vortex, Fluxbeam, Fogo.fun, Moonit), quote freshness, devnet support, transaction size limits, ExactIn vs ExactOut, fee structure, rate limits, multi-hop behavior, and how to monitor API status."
 ---
 
 ## General
@@ -31,7 +31,7 @@ From an integrator's perspective, P-Token will be transparent: the API handles i
 </Accordion>
 
 <Accordion title="What tokens are supported?">
-Any SPL token with liquidity on a supported DEX on Fogo: Vortex, Fluxbeam, or Fogo.fun. If a direct pool doesn't exist, the routing engine tries multi-hop paths through intermediate tokens like SOL or USDC.
+Any SPL token with liquidity on a supported DEX on Fogo: Vortex, Fluxbeam, Fogo.fun, or Moonit. If a direct pool doesn't exist, the routing engine tries multi-hop paths through intermediate tokens like SOL or USDC.
 
 If `GET /api/v1/quote` returns `no route found`, the token either has no listed pools or insufficient liquidity for the requested amount.
 </Accordion>

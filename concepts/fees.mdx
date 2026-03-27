@@ -1,12 +1,12 @@
 ---
 title: "Fees"
 description: "Fee structure for swaps through Argyros on Fogo."
-llmDescription: "Argyros fee structure on Fogo. Covers pool fees (set by DEX operators like Vortex, Fluxbeam, and Fogo.fun, shown in feeBps), aggregator protocol fees (shown in feeAmount), and the no-hidden-fees guarantee where amountIn/amountOut already account for all fees."
+llmDescription: "Argyros fee structure on Fogo. Covers pool fees (set by DEX operators like Vortex, Fluxbeam, Fogo.fun, and Moonit, shown in feeBps), aggregator protocol fees (shown in feeAmount), and the no-hidden-fees guarantee where amountIn/amountOut already account for all fees."
 ---
 
 ## Pool fees
 
-Each liquidity pool charges its own fee per swap hop. These fees are set by the pool operators (Vortex, Fluxbeam, Fogo.fun) and are deducted from the swap amount automatically.
+Each liquidity pool charges its own fee per swap hop. These fees are set by the pool operators (Vortex, Fluxbeam, Fogo.fun, Moonit) and are deducted from the swap amount automatically.
 
 The `feeBps` field in the quote response shows the total fee across all hops in basis points (bps, where 1 bps = 0.01%).
 

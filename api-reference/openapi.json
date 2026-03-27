@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Argyros API",
-    "description": "Swap aggregator API on Fogo. Get quotes, build swap transactions, and retrieve raw instructions for multi-hop token swaps across Vortex, Fluxbeam, and Fogo.fun. Solana support coming soon.",
+    "description": "Swap aggregator API on Fogo. Get quotes, build swap transactions, and retrieve raw instructions for multi-hop token swaps across Vortex, Fluxbeam, Fogo.fun, and Moonit. Solana support coming soon.",
     "version": "1.0.0",
     "contact": {
       "name": "Argyros",
@@ -271,7 +271,7 @@
           },
           "poolType": {
             "type": "string",
-            "description": "Liquidity pool type (Raydium, Orca, Meteora, PumpFun, etc.).",
+            "description": "Liquidity pool type (Raydium, Orca, Meteora, PumpFun, Moonit, etc.).",
             "example": "Raydium"
           },
           "percent": {

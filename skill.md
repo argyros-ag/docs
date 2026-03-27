@@ -1,6 +1,6 @@
 ---
 name: argyros-swap
-description: Integrate Argyros swap API on Fogo. Use for getting quotes, building swap transactions, getting raw instructions, and handling errors across Vortex, Fluxbeam, and Fogo.fun bonding curves. Solana support coming soon.
+description: Integrate Argyros swap API on Fogo. Use for getting quotes, building swap transactions, getting raw instructions, and handling errors across Vortex, Fluxbeam, Fogo.fun, and Moonit bonding curves. Solana support coming soon.
 version: "1.1.0"
 tags:
   - argyros
@@ -21,7 +21,7 @@ tags:
 
 ## Chain Support
 
-Currently: **Fogo** (5 max hops, Vortex/Fluxbeam/Fogo.fun DEXs).
+Currently: **Fogo** (5 max hops, Vortex/Fluxbeam/Fogo.fun/Moonit DEXs).
 
 **Coming soon**: Solana with P-Token (7 max hops, lower compute, Raydium/Orca/Meteora). When available, a `chain` query parameter will be added to all endpoints.
 
